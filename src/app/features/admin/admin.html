@@ -1,0 +1,54 @@
+<main class="admin-container">
+  <section class="admin-hero">
+    <span class="badge">ÁREA RESTRITA</span>
+    <h1 class="admin-title">Painel Administrativo</h1>
+    <p class="admin-subtitle">
+      Bem-vindo ao painel administrativo! Aqui você pode gerenciar produtos, pedidos e usuários de forma eficiente.
+    </p>
+  </section>
+
+  <section class="admin-user-section">
+    <h2>Usuário autenticado</h2>
+    <div class="user-info-box">
+      <p><strong>E-mail:</strong> {{ authFacade.usuarioAtual()?.email }}</p>
+      <p><strong>Perfil:</strong> {{ authFacade.ehAdmin() ? 'Administrador' : 'Usuário' }}</p>
+      <p class="status-line">
+        Usuário autenticado como {{ authFacade.ehAdmin() ? 'Administrador' : 'Usuário' }}.
+      </p>
+    </div>
+  </section>
+
+  <section class="admin-stats-section">
+    <h2>🔥 Visão geral</h2>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <h3>Produtos cadastrados</h3>
+        <span class="stat-numero">{{ produtosCadastrados() }}</span>
+      </div>
+      <div class="stat-card">
+        <h3>Pedidos pendentes</h3>
+        <span class="stat-numero">{{ pedidosPendentes() }}</span>
+      </div>
+      <div class="stat-card">
+        <h3>Usuários cadastrados</h3>
+        <span class="stat-numero">{{ usuariosCadastrados() }}</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="admin-actions-section">
+    <h2>Ações administrativas</h2>
+    <p class="actions-note">
+      Aqui você pode realizar diversas ações administrativas, como cadastrar novos produtos, gerenciar pedidos e manipular informações dos usuários.
+    </p>
+    <div class="actions-row">
+      <button pButton class="action-btn">Cadastrar produto</button>
+      <button pButton class="action-btn">Gerenciar pedidos</button>
+      <button pButton class="action-btn">Gerenciar usuários</button>
+    </div>
+  </section>
+
+  <section class="admin-logout-section">
+    <button pButton class="logout-btn" (click)="sair()">Sair da conta administrativa</button>
+  </section>
+</main>

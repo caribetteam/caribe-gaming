@@ -1,0 +1,245 @@
+<div class="pagina-carrinho">
+  @if (carrinhoFacade.carrinhoVazio()) {
+    <!-- CARRINHO VAZIO -->
+
+    <div class="carrinho-vazio-container">
+      <div class="carrinho-vazio-card">
+        <div class="vazio-icon-wrapper">
+          <i class="fa-solid fa-cart-shopping"></i>
+        </div>
+
+        <h2>Seu porão de tesouros está vazio!</h2>
+
+        <p>
+          Você ainda não adicionou nenhum jogo ao seu carrinho. Explore nosso catálogo e encontre
+          suas próximas aventuras.
+        </p>
+
+        <button class="btn-acao btn-primary btn-explorar" type="button" routerLink="/jogos">
+          <i class="fa-solid fa-gamepad"></i>
+          Explorar Jogos
+        </button>
+      </div>
+    </div>
+  } @else {
+    <!-- CABEÇALHO -->
+
+    <div class="cabecalho-carrinho">
+      <div class="titulo-area">
+        <i class="fa-solid fa-cart-shopping"></i>
+
+        <h1 class="titulo-pagina">Seu Carrinho</h1>
+      </div>
+
+      <div class="status-nuvem">
+        @if (authFacade.estaLogado()) {
+          <span class="badge-nuvem logado">
+            <i class="fa-solid fa-cloud"></i>
+
+            Sincronizado com sua conta
+          </span>
+        } @else {
+          <span class="badge-nuvem visitante">
+            <i class="fa-solid fa-hard-drive"></i>
+
+            Salvo neste aparelho ·
+
+            <a routerLink="/login" class="link-login-nuvem"> Faça login </a>
+
+            para sincronizar na nuvem
+          </span>
+        }
+      </div>
+    </div>
+
+    <!-- CONTEÚDO -->
+
+    <div class="conteudo-carrinho">
+      <!-- LISTA DE JOGOS -->
+
+      <section class="lista-carrinho">
+        @for (item of carrinhoFacade.itens(); track $index) {
+          <article class="item-carrinho">
+            <!-- IMAGEM -->
+
+            <div class="imagem-jogo">
+              @if (item.imagemUrl) {
+                <img [src]="item.imagemUrl" [alt]="item.nome" />
+              } @else {
+                <div class="imagem-placeholder">
+                  <i class="fa-solid fa-gamepad"></i>
+                </div>
+              }
+            </div>
+
+            <!-- INFORMAÇÕES -->
+
+            <div class="item-info">
+              <h3>
+                {{ item.nome }}
+              </h3>
+
+              <!-- PLATAFORMA -->
+
+              @if (item.plataforma) {
+                <div class="informacoes-jogo">
+                  <span>
+                    <i class="fa-solid fa-desktop"></i>
+
+                    {{ item.plataforma }}
+                  </span>
+                </div>
+              }
+
+              <!-- DISPONIBILIDADE -->
+
+              <div class="disponibilidade">
+                <i class="fa-solid fa-circle-check"></i>
+
+                Disponível para download
+              </div>
+            </div>
+
+            <!-- PREÇO E QUANTIDADE -->
+
+            <div class="item-acoes">
+              <!-- PREÇO -->
+
+              <div class="preco-jogo">R$ {{ item.preco.toFixed(2) }}</div>
+
+              <div class="acoes-linha">
+                <!-- QUANTIDADE -->
+
+                <div class="controle-quantidade">
+                  <button
+                    type="button"
+                    class="btn-quantidade"
+                    (click)="carrinhoFacade.diminuirQuantidade($index)"
+                    aria-label="Diminuir quantidade"
+                  >
+                    −
+                  </button>
+
+                  <span class="quantidade">
+                    {{ item.quantidade || 1 }}
+                  </span>
+
+                  <button
+                    type="button"
+                    class="btn-quantidade"
+                    (click)="carrinhoFacade.aumentarQuantidade($index)"
+                    aria-label="Aumentar quantidade"
+                  >
+                    +
+                  </button>
+                </div>
+
+                <!-- LIXEIRA -->
+
+                <button
+                  type="button"
+                  class="btn-remover"
+                  (click)="removerItem($index)"
+                  aria-label="Remover jogo"
+                  title="Remover jogo"
+                >
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </div>
+            </div>
+          </article>
+        }
+      </section>
+
+      <!-- RESUMO DO PEDIDO -->
+
+      <aside class="resumo-pedido">
+        <div class="resumo-titulo">
+          <i class="fa-regular fa-clipboard"></i>
+
+          <h2>Resumo do pedido</h2>
+        </div>
+
+        <!-- ITENS -->
+
+        <div class="resumo-linha">
+          <span> Itens ({{ carrinhoFacade.quantidade() }}) </span>
+
+          <strong> R$ {{ carrinhoFacade.total().toFixed(2) }} </strong>
+        </div>
+
+        <!-- DESCONTO -->
+
+        <div class="resumo-linha desconto">
+          <span> Descontos </span>
+
+          <strong> R$ 0,00 </strong>
+        </div>
+
+        <div class="linha-total"></div>
+
+        <!-- TOTAL -->
+
+        <div class="total-final">
+          <span> TOTAL </span>
+
+          <strong> R$ {{ carrinhoFacade.total().toFixed(2) }} </strong>
+        </div>
+
+        <!-- FINALIZAR -->
+
+        <button class="btn-finalizar" type="button" routerLink="/checkout">
+          <i class="fa-solid fa-cart-shopping"></i>
+
+          Finalizar compra
+        </button>
+
+        <!-- SEGURANÇA -->
+
+        <div class="compra-segura">
+          <i class="fa-solid fa-lock"></i>
+
+          Compra 100% segura
+        </div>
+
+        <div class="separador"></div>
+
+        <!-- PAGAMENTO -->
+
+        <div class="pagamento">
+          <span> Formas de pagamento </span>
+
+          <div class="formas-pagamento">
+            <div class="cartao">VISA</div>
+
+            <div class="cartao mastercard">
+              <i class="fa-brands fa-cc-mastercard"></i>
+            </div>
+
+            <div class="cartao pix">PIX</div>
+
+            <div class="cartao paypal">
+              <i class="fa-brands fa-paypal"></i>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- BOTÕES INFERIORES -->
+
+    <div class="acoes-carrinho">
+      <button class="btn-acao btn-secondary" type="button" routerLink="/jogos">
+        <i class="fa-solid fa-arrow-left"></i>
+
+        Continuar comprando
+      </button>
+
+      <button class="btn-acao btn-danger" type="button" (click)="limparCarrinho()">
+        <i class="fa-solid fa-trash-can"></i>
+
+        Limpar carrinho
+      </button>
+    </div>
+  }
+</div>
