@@ -1,4 +1,21 @@
-# CaribeGaming
+# Caribe's Gaming
+
+E-commerce voltado para o mercado de jogos desenvolvido como projeto prático no curso FullStack Developer (parceria Petrobras e Firjan SENAI).
+
+**Acesse o site:** [https://caribesgaming.vercel.app](https://caribesgaming.vercel.app)
+
+## Equipe de Desenvolvimento (Caribe Team)
+
+O projeto foi totalmente planejado e programado por:
+
+- Agatha Nunes
+- Cawã Santos
+- Kassya Brito
+- Kauany Vitória Moreira
+- Maria Clara Gonçalves
+- Maria Eduarda Martins
+- Nicole Santos
+- Tayssa Freire
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.1.3.
 
