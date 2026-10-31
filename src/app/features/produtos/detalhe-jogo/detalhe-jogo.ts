@@ -1,5 +1,5 @@
-import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
-import { CommonModule, Location } from '@angular/common';
+import { Component, OnInit, inject, ChangeDetectorRef, PLATFORM_ID } from '@angular/core';
+import { CommonModule, Location, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { take } from 'rxjs';
@@ -25,6 +25,7 @@ export class DetalheJogo implements OnInit {
   private jogosApi = inject(JogosApiService);
   private carrinhoFacade = inject(CarrinhoFacade);
   private favoritosService = inject(FavoritosService);
+  private platformId = inject(PLATFORM_ID);
 
   jogo: DetalhesJogo | null = null;
   carregando: boolean = true;
@@ -65,6 +66,10 @@ export class DetalheJogo implements OnInit {
   readonly coresAvatares = ['#00d2d3', '#ff9f43', '#ee5253', '#0abde3', '#10ac84', '#5f27cd'];
 
   ngOnInit(): void {
+    // No servidor (SSR) não busca nada: a tela sai com o barquinho de carregamento
+    // e o navegador carrega os dados logo depois.
+    if (!isPlatformBrowser(this.platformId)) return;
+
     this.route.paramMap.subscribe((params) => {
       this.jogoIdOuSlug = params.get('id') || '';
       if (this.jogoIdOuSlug) {
@@ -328,8 +333,25 @@ export class DetalheJogo implements OnInit {
     this.router.navigate(['/carrinho']);
   }
 
+  // Salva de verdade no FavoritosService, então aparece na aba Favoritos da listagem
   toggleFavorito(): void {
-    this.favorito = !this.favorito;
+    if (!this.jogo) return;
+    const id = String(this.jogo.id);
+
+    this.favoritosService.toggleFavorito({
+      id,
+      nome: this.jogo.nome,
+      genero: this.genero,
+      plataforma: this.jogo.plataformas,
+      precoOriginal: this.precoOriginalFormatado,
+      precoPromocional: this.precoFormatado,
+      desconto: this.desconto,
+      categorias: [],
+      imagem: this.galeriaImagens[0] ?? this.jogo.background_image,
+      slug: id
+    });
+
+    this.favorito = this.favoritosService.ehFavorito(id);
     this.exibirToast(this.favorito ? '❤️ Salvo nos favoritos!' : '💔 Removido dos favoritos!');
   }
 
