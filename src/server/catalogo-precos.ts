@@ -18,7 +18,7 @@ export const PRECOS: Record<string, { nome: string; precoCentavos: number }> = {
   '13': { nome: 'EA Sports FC 24',                 precoCentavos: 35000 },
   '14': { nome: 'Life is Strange',                 precoCentavos: 1980  },
   '15': { nome: 'The Last of Us Part I',           precoCentavos: 24990 },
-  '16': { nome: 'F1 23',                           precoCentavos: 14360 },
+  '16': { nome: 'F1® 25',                           precoCentavos: 14360 },
   '17': { nome: 'Elden Ring',                      precoCentavos: 22990 },
   '18': { nome: 'Cyberpunk 2077',                  precoCentavos: 9995  },
   '19': { nome: 'Marvel Rivals',                   precoCentavos: 0     },
