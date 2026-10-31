@@ -1,7 +1,8 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import {
-  Observable, forkJoin, of, timer, map, catchError, shareReplay, switchMap, scan,
+  Observable, EMPTY, forkJoin, of, timer, map, catchError, shareReplay, switchMap, scan,
 } from 'rxjs';
 import { DetalhesJogo, JogoCard, Dlc, CATALOGO } from '../models/jogo';
 
@@ -11,9 +12,6 @@ const TAMANHO_LOTE = 40;
 
 const capa = (appid: number) =>
   `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}/library_600x900.jpg`;
-
-const header = (appid: number) =>
-  `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}/header.jpg`;
 
 function formatarPreco(p: any) {
   if (!p) return null;
@@ -41,16 +39,22 @@ function dividir<T>(lista: T[], tamanho: number): T[][] {
 export class JogosApiService {
   private http = inject(HttpClient);
 
+  // As chamadas à Steam só rodam no navegador. No servidor (SSR) elas não são feitas:
+  // a tela sai do servidor em estado "carregando" e o navegador busca os dados.
+  private noNavegador = isPlatformBrowser(inject(PLATFORM_ID));
+
   private detalheCache = new Map<number, Observable<DetalhesJogo>>();
   private dlcCache = new Map<number, Observable<Dlc[]>>();
 
   // Consulta os preços agora e repete a cada 5 min. Se uma consulta falhar, mantém os últimos preços.
   // refCount: true -> para de consultar quando nenhuma tela estiver usando a lista.
-  private precos$: Observable<any> = timer(0, INTERVALO_ATUALIZACAO).pipe(
-    switchMap(() => this.buscarPrecos(CATALOGO.map((g) => g.appid))),
-    scan((anterior: any, atual: any) => atual ?? anterior, {}),
-    shareReplay({ bufferSize: 1, refCount: true })
-  );
+  private precos$: Observable<any> = this.noNavegador
+    ? timer(0, INTERVALO_ATUALIZACAO).pipe(
+        switchMap(() => this.buscarPrecos(CATALOGO.map((g) => g.appid))),
+        scan((anterior: any, atual: any) => atual ?? anterior, {}),
+        shareReplay({ bufferSize: 1, refCount: true })
+      )
+    : EMPTY;
 
   // Preços de vários jogos, em lotes. Devolve null se todos os lotes falharem.
   private buscarPrecos(ids: number[]): Observable<any | null> {
@@ -96,6 +100,8 @@ export class JogosApiService {
   }
 
   obterJogo(id: string): Observable<DetalhesJogo> {
+    if (!this.noNavegador) return EMPTY;
+
     const appid = Number(id);
     let cached = this.detalheCache.get(appid);
     if (!cached) {
@@ -108,6 +114,8 @@ export class JogosApiService {
   // Expansões e DLCs: pega os preços de todos, fica com os mais caros (as expansões)
   // e só busca nome e imagem desses, para não estourar o limite de consultas da Steam.
   obterDlcs(appid: number, ids: number[], limite = 8): Observable<Dlc[]> {
+    if (!this.noNavegador) return EMPTY;
+
     let cached = this.dlcCache.get(appid);
     if (!cached) {
       cached = this.buscarDlcs(ids, limite).pipe(shareReplay(1));
@@ -152,7 +160,7 @@ export class JogosApiService {
     return {
       id,
       nome: d.name,
-      imagem: d.header_image || header(id),
+      imagem: d.header_image,
       gratis: d.is_free === true,
       preco: formatarPreco(d.price_overview),
     };
@@ -180,19 +188,12 @@ export class JogosApiService {
           ? { nota: ((q.total_positive / q.total_reviews) * 5).toFixed(1), total: q.total_reviews }
           : null;
 
-        // Captura as screenshots em RESOLUÇÃO MÁXIMA / ORIGINAL (path_full)
-        const screenshots: string[] = (d.screenshots ?? []).map((s: any) => s.path_full);
-
-        // Capa em alta definição oficial da Steam
-        const capaAltaQualidade = d.header_image || header(appid);
-
-        // Galeria com a capa na 1ª posição (0) + screenshots em 1080p/4K
-        const imagens = [capaAltaQualidade, ...screenshots];
+        const imagens: string[] = (d.screenshots ?? []).map((s: any) => s.path_full);
 
         return {
           id: appid,
           nome: d.name,
-          background_image: capaAltaQualidade,
+          background_image: imagens[0] ?? d.header_image,
           descricao: d.short_description,
           plataformas: meta.plataformas.join(' / '),
           desenvolvedoras: (d.developers ?? []).join(', '),

@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, ChangeDetectorRef, DestroyRef } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ProdutosService } from '../../core/services/produtos.service';
@@ -209,7 +210,7 @@ export class Produtos implements OnInit {
     this.aplicarFiltros();
   }
 
-      toggleFiltros(): void {
+  toggleFiltros(): void {
     this.filtrosAbertos = !this.filtrosAbertos;
   }
 
@@ -342,3 +343,4 @@ export class Produtos implements OnInit {
     }, 3000);
   }
 }
+
