@@ -42,6 +42,9 @@ export class DetalheJogo implements OnInit {
   desconto: number = 0;
   genero: string = '';
 
+  // Capa vertical (primeiro slide da galeria). Fica null se a imagem não existir.
+  capaGaleria: string | null = null;
+
   // Nota da Steam
   notaSteam: string = '—';
   notaSteamNum: number = 0;
@@ -65,6 +68,11 @@ export class DetalheJogo implements OnInit {
   distribuicao: { estrelas: number; qtd: number; pct: number }[] = [];
   readonly coresAvatares = ['#00d2d3', '#ff9f43', '#ee5253', '#0abde3', '#10ac84', '#5f27cd'];
 
+  // O slide atual é a capa vertical? (usa fundo desfocado e mostra a imagem inteira)
+  get capaAtiva(): boolean {
+    return !!this.capaGaleria && this.indiceAtivo === 0 && this.galeriaImagens[0] === this.capaGaleria;
+  }
+
   ngOnInit(): void {
     // No servidor (SSR) não busca nada: a tela sai com o barquinho de carregamento
     // e o navegador carrega os dados logo depois.
@@ -84,6 +92,7 @@ export class DetalheJogo implements OnInit {
     this.erro = false;
     this.jogo = null;
     this.galeriaImagens = [];
+    this.capaGaleria = null;
     this.indiceAtivo = 0;
     this.precoOriginalFormatado = '';
     this.precoFormatado = '';
@@ -106,8 +115,9 @@ export class DetalheJogo implements OnInit {
       next: (d) => {
         this.jogo = d;
 
-        // Galeria com a capa na posição 0 recebida do serviço
+        // A capa vem na posição 0 da galeria
         this.galeriaImagens = d.imagens ?? [];
+        this.capaGaleria = d.capa ?? null;
         this.indiceAtivo = 0;
 
         this.genero = d.generos ?? '';
@@ -189,6 +199,29 @@ export class DetalheJogo implements OnInit {
 
   tratarErroImagem(event: Event): void {
     const imgElem = event.target as HTMLImageElement;
+
+    // A capa principal falhou: tenta a capa certa pela API da Steam; se não houver, tira da galeria
+    if (this.capaGaleria && imgElem.getAttribute('src') === this.capaGaleria) {
+      const falhou = this.capaGaleria;
+
+      this.jogosApi.obterCapaAlternativa(Number(this.jogo?.id)).subscribe((url) => {
+        const i = this.galeriaImagens.indexOf(falhou);
+        if (i < 0) return;
+
+        if (url && url !== falhou) {
+          this.galeriaImagens[i] = url; // troca a capa quebrada pela correta
+          this.capaGaleria = url;
+        } else {
+          this.galeriaImagens = this.galeriaImagens.filter((u) => u !== falhou);
+          this.capaGaleria = null;
+          this.indiceAtivo = 0;
+        }
+        this.cdr.markForCheck();
+      });
+      return;
+    }
+
+    // Outras imagens: tenta a imagem principal do jogo
     if (this.jogo?.background_image && imgElem.src !== this.jogo.background_image) {
       imgElem.src = this.jogo.background_image;
     }

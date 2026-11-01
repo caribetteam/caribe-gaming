@@ -570,6 +570,43 @@
 }
 
 /* ==========================================================================
+   CARD: ESGOTADO, PREÇO INDISPONÍVEL E CAPA DE RESERVA
+   ========================================================================== */
+.card-badges app-plataforma-icones { margin-left: auto; }
+
+.badge-esgotado {
+  background: #ff4757;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.7rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.card-imagem img.esgotado-img { filter: grayscale(80%) opacity(0.6); }
+
+/* capa de reserva (vinda da API da Steam): aparece inteira, sem cortar */
+.card-imagem img.capa-horizontal {
+  object-fit: contain;
+  background: linear-gradient(160deg, #14213a, #0a1626);
+}
+
+.preco-promocional.indisponivel {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-shadow: none;
+}
+
+.btn-carrinho:disabled,
+.btn-carrinho:disabled:hover {
+  background: #2f3542;
+  color: #a4b0be;
+  cursor: not-allowed;
+}
+
+
+/* ==========================================================================
    6. RESPONSIVIDADE (sempre no final do arquivo)
    ========================================================================== */
 

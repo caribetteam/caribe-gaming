@@ -13,6 +13,11 @@ export class ProdutosService {
       .pipe(map((lista) => lista.map((j) => this.mapearJogoParaProduto(j))));
   }
 
+  // Capa de reserva, usada só quando a capa principal do card não carrega
+  obterCapaAlternativa(id: string): Observable<string | null> {
+    return this.jogosApi.obterCapaAlternativa(Number(id));
+  }
+
   private mapearJogoParaProduto(j: JogoCard): Produto {
     return {
       id: j.id.toString(),
@@ -28,7 +33,6 @@ export class ProdutosService {
       categorias: j.categorias,
       slug: j.slug,
       estoque: j.estoque,
-      
     };
   }
 }

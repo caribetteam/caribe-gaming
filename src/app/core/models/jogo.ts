@@ -29,6 +29,7 @@ export interface DetalhesJogo {
   // campos novos (opcionais para as páginas antigas continuarem compilando)
   generos?: string;
   imagens?: string[];
+  capa?: string;
   requisitos?: { minimos: string | null; recomendados: string | null };
   gratis?: boolean;
   estoque?: boolean;
@@ -88,6 +89,7 @@ export interface JogoCatalogo {
   categorias: string[];
   gratis?: boolean;
   estoque?: boolean;
+  capa?: string; // opcional: capa manual (ex.: '/capas/f1-25.jpg'). Se existir, vale mais que a da Steam.
 }
 
 export interface Dlc {
@@ -104,9 +106,9 @@ export interface Dlc {
 }
 
 export const CATALOGO: JogoCatalogo[] = [
-  { appid: 271590,  nome: 'Grand Theft Auto V', plataformas: ['PC', 'PS'], generos: ['Ação', 'Mundo Aberto'], categorias: ['action', 'adventure'] },
+  { appid: 	3240220,  nome: 'Grand Theft Auto V', plataformas: ['PC', 'PS'], generos: ['Ação', 'Mundo Aberto'], categorias: ['action', 'adventure'] },
   { appid: 292030,  nome: 'The Witcher 3: Wild Hunt', plataformas: ['PC', 'PS'], generos: ['RPG', 'Mundo Aberto'], categorias: ['role-playing-rpg', 'adventure'] },
-  { appid: 	1222670, nome: 'The Sims 4', plataformas: ['PC'], generos: ['Simulação'], categorias: ['simulator'], gratis: true },
+  { appid: 1222670, nome: 'The Sims 4', plataformas: ['PC'], generos: ['Simulação'], categorias: ['simulator'], gratis: true },
   { appid: 1593500, nome: 'God of War', plataformas: ['PC', 'PS'], generos: ['Ação', 'Aventura'], categorias: ['action', 'adventure'] },
   { appid: 1817070, nome: "Marvel's Spider-Man Remastered", plataformas: ['PC', 'PS'], generos: ['Ação', 'Aventura'], categorias: ['action', 'adventure'] },
   { appid: 2519060, nome: 'Call of Duty: Modern Warfare III', plataformas: ['PC', 'PS'], generos: ['Tiro', 'FPS'], categorias: ['shooter', 'action'] },
@@ -115,10 +117,11 @@ export const CATALOGO: JogoCatalogo[] = [
   { appid: 367520,  nome: 'Hollow Knight', plataformas: ['PC'], generos: ['Metroidvania'], categorias: ['platform', 'indie'] },
   { appid: 1174180, nome: 'Red Dead Redemption 2', plataformas: ['PC', 'PS'], generos: ['Ação', 'Mundo Aberto'], categorias: ['action', 'adventure'] },
   { appid: 242050,  nome: "Assassin's Creed IV Black Flag", plataformas: ['PC'], generos: ['Ação'], categorias: ['action', 'adventure'] },
-  { appid: 638970,  nome: 'Yakuza 0', plataformas: ['PC'], generos: ['Ação', 'Luta'], categorias: ['action', 'adventure'] },
-  { appid: 2195250, nome: 'EA Sports FC 24', plataformas: ['PC', 'PS'], generos: ['Esportes'], categorias: ['sport'] },
-  { appid: 319630,  nome: 'Life is Strange', plataformas: ['PC'], generos: ['História Interativa'], categorias: ['adventure'] },
+  { appid: 2988580,  nome: "Yakuza 0 Director's Cut", plataformas: ['PC'], generos: ['Ação', 'Luta'], categorias: ['action', 'adventure'] },
+  { appid: 4080220, nome: 'EA SPORTS FC™ 27', plataformas: ['PC', 'PS'], generos: ['Esportes'], categorias: ['sport'] },
+  { appid: 1265920,  nome: 'Life is Strange Remastered', plataformas: ['PC'], generos: ['História Interativa'], categorias: ['adventure'] },
   { appid: 1888930, nome: 'The Last of Us Part I', plataformas: ['PC', 'PS'], generos: ['Ação', 'Sobrevivência'], categorias: ['action', 'adventure'], estoque: false },
+  // Se a capa do F1 25 não carregar sozinha, salve a imagem em public/capas/f1-25.jpg e acrescente: capa: '/capas/f1-25.jpg'
   { appid: 3059520, nome: 'F1® 25', plataformas: ['PC', 'PS'], generos: ['Corrida'], categorias: ['racing', 'sport'] },
   { appid: 1245620, nome: 'Elden Ring', plataformas: ['PC', 'PS'], generos: ['RPG', 'Souls-like'], categorias: ['role-playing-rpg', 'action'] },
   { appid: 1091500, nome: 'Cyberpunk 2077', plataformas: ['PC'], generos: ['RPG', 'Sci-Fi'], categorias: ['role-playing-rpg', 'action'] },

@@ -239,12 +239,18 @@ export class Produtos implements OnInit {
     return produto.id;
   }
 
-  // Se a capa vertical não existir na Steam, usa a imagem horizontal do mesmo jogo
+  // Só roda quando a capa principal do card falhou (cdn.cloudflare ou a manual).
+  // Busca a capa vertical certa na API da Steam e, se não houver, a imagem horizontal.
   imagemFalhou(event: Event, produto: Produto): void {
     const img = event.target as HTMLImageElement;
-    if (!img.src.endsWith('/header.jpg')) {
-      img.src = `https://cdn.cloudflare.steamstatic.com/steam/apps/${produto.id}/header.jpg`;
-    }
+    if (img.dataset['reserva']) return; // já tentou a reserva uma vez
+    img.dataset['reserva'] = '1';
+
+    this.produtosService.obterCapaAlternativa(produto.id).subscribe((url) => {
+      if (!url) return;
+      img.src = url;
+      img.classList.add('capa-horizontal');
+    });
   }
 
   // --- NAVEGAÇÃO E AÇÕES DE E-COMMERCE ---
@@ -343,4 +349,3 @@ export class Produtos implements OnInit {
     }, 3000);
   }
 }
-
