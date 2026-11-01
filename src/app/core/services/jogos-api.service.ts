@@ -17,6 +17,7 @@ const capaSteam = (appid: number) =>
 
 const capaDe = (g: { appid: number; capa?: string }) => g.capa ?? capaSteam(g.appid);
 
+
 function formatarPreco(p: any) {
   if (!p) return null;
   return {
@@ -50,6 +51,8 @@ export class JogosApiService {
   private detalheCache = new Map<number, Observable<DetalhesJogo>>();
   private dlcCache = new Map<number, Observable<Dlc[]>>();
   private capaCache = new Map<number, Observable<string | null>>();
+  private horizontalCache = new Map<number, Observable<string | null>>();
+  
 
   // Consulta os preços agora e repete a cada 5 min. Se uma consulta falhar, mantém os últimos preços.
   // refCount: true -> para de consultar quando nenhuma tela estiver usando a lista.
@@ -146,6 +149,28 @@ export class JogosApiService {
     }
     return cached;
   }
+
+  // Imagem horizontal oficial (header) com o endereço certo vindo da API da Steam.
+  // Reserva dos cards da Home, para jogos cujo endereço padrão não existe.
+  obterImagemHorizontal(appid: number): Observable<string | null> {
+    if (!this.noNavegador) return of(null);
+
+    let cached = this.horizontalCache.get(appid);
+    if (!cached) {
+      cached = this.http
+        .get<any>(`${STEAM}/api/appdetails`, {
+          params: { appids: appid, cc: 'br', filters: 'basic' },
+        })
+        .pipe(
+          map((r) => (r?.[appid]?.data?.header_image as string | undefined) ?? null),
+          catchError(() => of(null)),
+          shareReplay(1)
+        );
+      this.horizontalCache.set(appid, cached);
+    }
+    return cached;
+  }
+
 
   obterJogo(id: string): Observable<DetalhesJogo> {
     if (!this.noNavegador) return EMPTY;

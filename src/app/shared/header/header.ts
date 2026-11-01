@@ -3,44 +3,72 @@ import {
   inject,
   ViewEncapsulation,
   ElementRef,
-  HostListener
+  HostListener,
+  PLATFORM_ID,
+  effect,
+  signal,
+  afterNextRender,
 } from '@angular/core';
 
-import { CommonModule } from '@angular/common';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 
 import { AuthFacade } from '../../core/facades/auth.facade';
-import { ProdutosService} from '../../core/services/produtos.service';
+import { CarrinhoFacade } from '../../core/facades/carrinho.facade';
+import { ProdutosService } from '../../core/services/produtos.service';
 import { Produto } from '../../core/models/jogo';
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    RouterLink,
-    RouterLinkActive
-  ],
+  imports: [CommonModule, FormsModule, RouterLink, RouterLinkActive],
   templateUrl: './header.html',
   styleUrl: './header.css',
   encapsulation: ViewEncapsulation.Emulated,
 })
 export class Header {
-
   authFacade = inject(AuthFacade);
+  carrinhoFacade = inject(CarrinhoFacade);
   produtosService = inject(ProdutosService);
   router = inject(Router);
+  private platformId = inject(PLATFORM_ID);
 
   menuAberto = false;
   menuUsuarioAberto = false;
 
   termoPesquisa = '';
   mostrarSugestoes = false;
-  produtosFiltrados: any[] = [];
+  produtosFiltrados: Produto[] = [];
 
-  constructor(private elementRef: ElementRef) {}
+  // Contador do carrinho
+  badgeVisivel = signal(false); // só liga no navegador, para o servidor e o navegador começarem iguais
+  badgePulando = signal(false);
+  private quantidadeAnterior = this.carrinhoFacade.quantidade();
+  private timerBadge: any;
+
+  constructor(private elementRef: ElementRef) {
+    afterNextRender(() => this.badgeVisivel.set(true));
+
+    // Toda vez que a quantidade AUMENTA, o número dá um pulinho
+    effect(() => {
+      const quantidade = this.carrinhoFacade.quantidade();
+      if (quantidade > this.quantidadeAnterior) this.animarBadge();
+      this.quantidadeAnterior = quantidade;
+    });
+  }
+
+  private animarBadge(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    clearTimeout(this.timerBadge);
+    this.badgePulando.set(false);
+
+    // pequeno atraso para a animação reiniciar mesmo com vários cliques seguidos
+    setTimeout(() => {
+      this.badgePulando.set(true);
+      this.timerBadge = setTimeout(() => this.badgePulando.set(false), 450);
+    }, 20);
+  }
 
   toggleMenu() {
     this.menuAberto = !this.menuAberto;
@@ -54,183 +82,49 @@ export class Header {
     this.menuUsuarioAberto = !this.menuUsuarioAberto;
   }
 
-
   // ==========================
   // PESQUISA
   // ==========================
-
-
-
-   
   pesquisar() {
-  const termo = this.termoPesquisa
-    .trim()
-    .toLowerCase();
+    const termo = this.termoPesquisa.trim();
 
-  if (!termo) {
-    this.produtosFiltrados = [];
-    this.mostrarSugestoes = false;
-    return;
-  }
-
-  // Consome o Observable da API em vez do antigo array estático
-  this.produtosService.obterProdutos().subscribe({
-    next: (produtos: Produto[]) => {
-      this.produtosFiltrados = produtos
-        .filter((produto: Produto) => {
-          const nome = produto.nome?.toLowerCase() || '';
-          const slug = produto.slug?.toLowerCase() || '';
-
-          return (
-            nome.includes(termo) ||
-            slug.includes(termo)
-          );
-        })
-        .slice(0, 6);
-
-      this.mostrarSugestoes = this.produtosFiltrados.length > 0;
-    },
-    error: (err) => {
-      console.error('Erro ao pesquisar produtos:', err);
+    if (!termo) {
+      this.produtosFiltrados = [];
       this.mostrarSugestoes = false;
+      return;
     }
-  });
-}
 
+    this.produtosFiltrados = this.produtosService.buscarNoCatalogo(termo, 6);
+    this.mostrarSugestoes = true; // sem resultado, o menu mostra "Nenhum jogo encontrado"
+  }
 
   // ==========================
   // SELECIONAR JOGO
   // ==========================
-
-  selecionarJogo(produto: any) {
-
+  selecionarJogo(produto: Produto) {
     this.termoPesquisa = produto.nome;
-
     this.mostrarSugestoes = false;
-
-    const rota = this.obterRotaJogo(produto);
-
-    this.router.navigateByUrl(rota);
+    this.fecharMenu();
+    this.router.navigate(['/produto', produto.id]);
   }
-
-
-  // ==========================
-  // ROTAS DOS JOGOS
-  // ==========================
-
-  obterRotaJogo(produto: any): string {
-
-    const rotas: { [slug: string]: string } = {
-
-      'grand-theft-auto-v':
-        '/jogos/grand-theft-auto-v',
-
-      'the-witcher-3-wild-hunt':
-        '/jogos/the-witcher-3',
-
-      'the-sims-4':
-        '/jogos/the-sims-4',
-
-      'god-of-war-4':
-        '/jogos/god-of-war',
-
-      'marvels-spider-man-remastered':
-        '/jogos/marvels-spider-man-remastered',
-
-      'call-of-duty-modern-warfare-ii-2022':
-        '/jogos/call-of-duty-modern-warfare-ii',
-
-      'a-plague-tale-innocence':
-        '/jogos/a-plague-tale',
-
-      'god-of-war-ragnarok':
-        '/jogos/god-of-war-ragnarök',
-
-      'hollow-knight':
-        '/jogos/hollow-knight',
-
-      'the-last-of-us-part-ii-remastered':
-        '/jogos/the-last-of-us-II',
-
-      // RED DEAD
-      'red-dead-redemption-2':
-        '/jogos/red-dead-redemption-2',
-
-      'assassins-creed-iv-black-flag':
-        '/jogos/assassins-creed-iv-black-flag',
-
-      'yakuza-0':
-        '/jogos/yakuza-0',
-
-      'ea-sports-fc-24':
-        '/jogos/ea-sports-fc-24',
-
-      'life-is-strange':
-        '/jogos/life-is-strange',
-
-      'the-last-of-us-part-i':
-        '/jogos/the-last-of-Us',
-
-      'f1-23':
-        '/jogos/f1-23',
-
-      'elden-ring':
-        '/jogos/elden-ring',
-
-      'cyberpunk-2077':
-        '/jogos/cyberpunk-2077',
-
-      'marvel-rivals':
-        '/jogos/marvel-rivals'
-    };
-
-
-    const slug =
-      produto.slug?.toLowerCase();
-
-
-    // Se existir uma rota específica
-    if (slug && rotas[slug]) {
-      return rotas[slug];
-    }
-
-
-    // Caso não exista rota específica,
-    // abre a página genérica do produto
-    return `/produto/${produto.id}`;
-  }
-
 
   // ==========================
   // CLIQUE FORA
   // ==========================
-
   @HostListener('document:click', ['$event'])
   aoClicarFora(event: Event) {
-
-    if (
-      !this.elementRef.nativeElement.contains(
-        event.target
-      )
-    ) {
-
+    if (!this.elementRef.nativeElement.contains(event.target)) {
       this.menuUsuarioAberto = false;
-
       this.mostrarSugestoes = false;
     }
   }
 
-
   // ==========================
   // SAIR
   // ==========================
-
   sair() {
-
     this.authFacade.sair();
-
     this.menuUsuarioAberto = false;
-
     this.fecharMenu();
   }
 }

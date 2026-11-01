@@ -1,8 +1,21 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  inject,
+  ChangeDetectorRef,
+  DestroyRef,
+  PLATFORM_ID,
+} from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
+import { take } from 'rxjs';
 import { Header } from '../../shared/header/header';
 import { CarrinhoFacade } from '../../core/facades/carrinho.facade';
+import { JogosApiService } from '../../core/services/jogos-api.service';
+import { JogoCard } from '../../core/models/jogo';
+import { LoaderBarco } from '../../features/produtos/carregamento/cacrregamento-barco';
 
 interface GameItem {
   id: number;
@@ -10,177 +23,228 @@ interface GameItem {
   subtitle: string;
   originalPrice: string;
   promoPrice: string;
-  discount: string;
+  discount: string; // vazio quando o jogo não está em promoção
+  priceValue: number;
   badge?: string;
-  image: string;
-  slug?: string;
+  image: string; // banner (usado só no destaque)
+  horizontal: string; // imagem horizontal dos cards
+  capa: string; // capa vertical (usada no carrinho)
+  plataforma: string;
 }
+
+interface DetalheDestaque {
+  descricao: string;
+  screenshot: string | null;
+  header: string | null;
+}
+
+const BADGES_DESTAQUE = ['OFERTA DO DIA', 'DESTAQUE DA SEMANA', 'EM PROMOÇÃO'];
+
+// Arte larga da Steam (sem texto). Em jogos novos pode não existir; aí entra a screenshot.
+const bannerSteam = (appid: number) =>
+  `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}/library_hero.jpg`;
+
+// Imagem horizontal dos cards. Em jogos novos pode não existir; aí entra a da API.
+const horizontalSteam = (appid: number) =>
+  `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}/header.jpg`;
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, Header],
+  imports: [CommonModule, Header, LoaderBarco],
   templateUrl: './home.html',
   styleUrl: './home.css',
 })
 export class Home implements OnInit, OnDestroy {
   private carrinhoFacade = inject(CarrinhoFacade);
+  private jogosApi = inject(JogosApiService);
   private router = inject(Router);
+  private cdr = inject(ChangeDetectorRef);
+  private destroyRef = inject(DestroyRef);
+  private platformId = inject(PLATFORM_ID);
 
+  carregado = false;
   activeHeroIndex = 0;
   private autoSlideTimer: any;
 
-  heroGames: GameItem[] = [
-    {
-      id: 5,
-      title: "Marvel's Spider-Man Remastered",
-      subtitle: 'Experimente a ação de super-herói em uma aventura épica.',
-      originalPrice: 'R$ 349,90',
-      promoPrice: 'R$ 199,90',
-      discount: '-42%',
-      badge: 'OFERTA DO DIA',
-      image: 'https://i.pinimg.com/1200x/c8/a6/93/c8a693307e006df55eb3b8c7cb86891d.jpg',
-      slug: 'marvels-spider-man-remastered',
-    },
-    {
-      id: 16,
-      title: 'Formula 1 2023',
-      subtitle: 'Sinta a emoção da velocidade com o F1 2023.',
-      originalPrice: 'R$ 359,00',
-      promoPrice: 'R$ 143,60',
-      discount: '-60%',
-      badge: 'DESTAQUE DA SEMANA',
-      image: 'https://i.pinimg.com/1200x/71/52/68/715268628f6902ea0ed1361b71dbf627.jpg',
-      slug: 'f1-23',
-    },
-  ];
+  heroGames: GameItem[] = [];
+  offerGames: GameItem[] = [];
 
-  offerGames: GameItem[] = [
-    {
-      id: 10,
-      title: 'Red Dead Redemption 2',
-      subtitle: 'Rockstar Games',
-      originalPrice: 'R$ 299,90',
-      promoPrice: 'R$ 98,96',
-      discount: '-67%',
-      image: 'https://i.pinimg.com/736x/73/f7/47/73f7476132056ce768d3adee46dafc64.jpg',
-      slug: 'red-dead-redemption-2',
-    },
-    {
-      id: 1,
-      title: 'Grand Theft Auto V',
-      subtitle: 'Rockstar Games',
-      originalPrice: 'R$ 149,90',
-      promoPrice: 'R$ 74,95',
-      discount: '-50%',
-      image: 'https://i.pinimg.com/1200x/7d/bf/17/7dbf17f91c0fd5f606eb6ee7bb5cd636.jpg',
-      slug: 'grand-theft-auto-v',
-    },
-    {
-      id: 7,
-      title: 'A Plague Tale: Innocence',
-      subtitle: 'Focus Entertainment',
-      originalPrice: 'R$ 229,00',
-      promoPrice: 'R$ 91,60',
-      discount: '-60%',
-      image: 'https://i.pinimg.com/736x/69/13/bc/6913bc995e29ebe2bde3715cb6a0199e.jpg',
-      slug: 'a-plague-tale',
-    },
-    {
-      id: 20,
-      title: 'The Last of Us Part II',
-      subtitle: 'PlayStation Studios',
-      originalPrice: 'R$ 249,50',
-      promoPrice: 'R$ 124,75',
-      discount: '-50%',
-      image: 'https://i.pinimg.com/736x/af/d9/62/afd962cd0ddbaf6209f340e4d6edcd39.jpg',
-      slug: 'the-last-of-us-II',
-    },
-    {
-      id: 14,
-      title: 'Life is Strange',
-      subtitle: 'Square Enix',
-      originalPrice: 'R$ 99,00',
-      promoPrice: 'R$ 19,80',
-      discount: '-80%',
-      image: 'https://i.pinimg.com/1200x/d5/97/af/d597aff5740c76d0dd4504d7d12be010.jpg',
-      slug: 'life-is-strange',
-    },
-    {
-      id: 18,
-      title: 'Cyberpunk 2077',
-      subtitle: 'CD PROJEKT RED',
-      originalPrice: 'R$ 199,90',
-      promoPrice: 'R$ 99,95',
-      discount: '-50%',
-      image: 'https://i.pinimg.com/736x/67/89/fb/6789fb1dbf2c2e641e0f81f56ce8ccc6.jpg',
-      slug: 'cyberpunk-2077',
-    },
-  ];
+  private catalogo: JogoCard[] = [];
+  private detalhesDestaque = new Map<number, DetalheDestaque>();
+  private bannerFalhou$ = new Set<number>();
+
+  get heroAtual(): GameItem | undefined {
+    return this.heroGames[this.activeHeroIndex];
+  }
 
   ngOnInit() {
+    // No servidor (SSR) não busca nada nem liga timers: o navegador faz isso depois.
+    if (!isPlatformBrowser(this.platformId)) return;
+
     this.startAutoSlide();
+
+    // A lista chega de novo a cada 5 min (preços atualizados na Steam)
+    this.jogosApi
+      .listar()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (lista) => {
+          this.catalogo = lista;
+          this.montarHome();
+        },
+        error: (err) => console.error('Erro ao carregar a Home:', err),
+      });
   }
 
   ngOnDestroy() {
     this.stopAutoSlide();
   }
 
-  irParaPaginaDoJogo(jogo: GameItem): void {
-    const id = String(jogo.id);
+  // --- MONTAGEM DOS DADOS ---
+  private montarHome(): void {
+    // só entram jogos com estoque e com preço (ou grátis)
+    const disponiveis = this.catalogo.filter((j) => j.estoque && (j.preco || j.gratis));
+    const desconto = (j: JogoCard) => j.preco?.desconto ?? 0;
 
-    if (jogo.id >= 21) {
-      this.router.navigate(['/produto', jogo.slug || id]);
-      return;
-    }
+    const emPromocao = disponiveis
+      .filter((j) => desconto(j) > 0)
+      .sort((a, b) => desconto(b) - desconto(a));
+    const semPromocao = disponiveis.filter((j) => desconto(j) === 0);
+    const ordem = [...emPromocao, ...semPromocao];
 
-    switch (id) {
-      case '1': this.router.navigate(['/jogos/grand-theft-auto-v']); break;
-      case '2': this.router.navigate(['/jogos/the-witcher-3']); break;
-      case '3': this.router.navigate(['/jogos/the-sims-4']); break;
-      case '4': this.router.navigate(['/jogos/god-of-war']); break;
-      case '5': this.router.navigate(['/jogos/marvels-spider-man-remastered']); break;
-      case '6': this.router.navigate(['/jogos/call-of-duty-modern-warfare-ii']); break;
-      case '7': this.router.navigate(['/jogos/a-plague-tale']); break;
-      case '8': this.router.navigate(['/jogos/god-of-war-ragnarök']); break;
-      case '9': this.router.navigate(['/jogos/hollow-knight']); break;
-      case '10': this.router.navigate(['/jogos/red-dead-redemption-2']); break;
-      case '11': this.router.navigate(['/jogos/assassins-creed-iv-black-flag']); break;
-      case '12': this.router.navigate(['/jogos/yakuza-0']); break;
-      case '13': this.router.navigate(['/jogos/ea-sports-fc-24']); break;
-      case '14': this.router.navigate(['/jogos/life-is-strange']); break;
-      case '15': this.router.navigate(['/jogos/the-last-of-Us']); break;
-      case '16': this.router.navigate(['/jogos/f1-23']); break;
-      case '17': this.router.navigate(['/jogos/elden-ring']); break;
-      case '18': this.router.navigate(['/jogos/cyberpunk-2077']); break;
-      case '19': this.router.navigate(['/jogos/marvel-rivals']); break;
-      case '20': this.router.navigate(['/jogos/the-last-of-us-II']); break;
-      default:
-        this.router.navigate(['/produto', jogo.slug || id]);
-        break;
+    const destaques = ordem.slice(0, 3);
+    const idsDestaque = new Set(destaques.map((j) => j.id));
+    // com poucas promoções, completa as ofertas com os outros jogos
+    const baseOfertas = emPromocao.length >= 4 ? emPromocao : ordem;
+
+    this.heroGames = destaques.map((j, i) => this.paraDestaque(j, i));
+    this.offerGames = baseOfertas
+      .filter((j) => !idsDestaque.has(j.id))
+      .slice(0, 10)
+      .map((j) => this.paraItem(j));
+
+    if (this.activeHeroIndex >= this.heroGames.length) this.activeHeroIndex = 0;
+
+    this.carregado = true;
+    this.carregarDetalhesDestaque(destaques.map((j) => j.id));
+    this.cdr.markForCheck();
+  }
+
+  private paraItem(j: JogoCard): GameItem {
+    const desc = j.preco?.desconto ?? 0;
+    return {
+      id: j.id,
+      title: j.nome,
+      subtitle: j.generos.slice(0, 2).join(' / '),
+      originalPrice: j.preco?.original ?? '',
+      promoPrice: j.gratis ? 'Grátis' : (j.preco?.atual ?? ''),
+      discount: desc > 0 ? `-${desc}%` : '',
+      priceValue: j.gratis ? 0 : (j.preco?.valor ?? 0),
+      image: j.capa,
+      horizontal: horizontalSteam(j.id),
+      capa: j.capa,
+      plataforma: j.plataformas.join(' / ') || 'PC',
+    };
+  }
+
+  private paraDestaque(j: JogoCard, indice: number): GameItem {
+    const item = this.paraItem(j);
+    const detalhe = this.detalhesDestaque.get(j.id);
+    const emPromocao = (j.preco?.desconto ?? 0) > 0;
+
+    return {
+      ...item,
+      badge: emPromocao ? (BADGES_DESTAQUE[indice] ?? 'EM PROMOÇÃO') : 'DESTAQUE',
+      subtitle: detalhe?.descricao || item.subtitle,
+      image: this.bannerDe(j.id),
+    };
+  }
+
+  private bannerDe(id: number): string {
+    if (!this.bannerFalhou$.has(id)) return bannerSteam(id);
+    const d = this.detalhesDestaque.get(id);
+    return d?.screenshot ?? d?.header ?? '';
+  }
+
+  // Descrição e screenshots só dos jogos do banner (ficam em cache, então a página do jogo abre mais rápido)
+  private carregarDetalhesDestaque(ids: number[]): void {
+    for (const id of ids) {
+      if (this.detalhesDestaque.has(id)) continue;
+      this.detalhesDestaque.set(id, { descricao: '', screenshot: null, header: null }); // marca como pedido
+
+      this.jogosApi
+        .obterJogo(String(id))
+        .pipe(take(1))
+        .subscribe({
+          next: (d) => {
+            this.detalhesDestaque.set(id, {
+              descricao: this.resumir(d.descricao ?? ''),
+              screenshot: d.imagens?.[1] ?? null, // [0] é a capa vertical
+              header: d.background_image ?? null,
+            });
+            this.montarHome();
+          },
+          error: () => {},
+        });
     }
   }
 
-  comprarAgora(jogo: GameItem) {
-    const precoNumerico = parseFloat(
-      jogo.promoPrice.replace('R$', '').replace('.', '').replace(',', '.').trim(),
-    );
+  private resumir(texto: string, max = 130): string {
+    const doc = new DOMParser().parseFromString(texto, 'text/html');
+    const limpo = (doc.documentElement.textContent ?? '').replace(/\s+/g, ' ').trim();
+    if (limpo.length <= max) return limpo;
+    return limpo.slice(0, max).replace(/\s+\S*$/, '') + '…';
+  }
 
-    // Envia o objeto formatado para o carrinho e redireciona
+  // --- IMAGENS COM RESERVA ---
+
+  // O banner largo não existe: passa para a screenshot (ou a imagem horizontal do jogo)
+  bannerFalhou(id: number): void {
+    if (this.bannerFalhou$.has(id)) return; // a reserva também falhou: para por aqui
+    this.bannerFalhou$.add(id);
+    this.montarHome();
+  }
+
+  // A imagem do card não existe: busca a certa na API da Steam
+  imagemCardFalhou(event: Event, jogo: GameItem): void {
+    const img = event.target as HTMLImageElement;
+    if (img.dataset['reserva']) return; // já tentou a reserva uma vez
+    img.dataset['reserva'] = '1';
+
+    this.jogosApi.obterImagemHorizontal(jogo.id).subscribe((url) => {
+      if (url) img.src = url;
+    });
+  }
+
+  // --- NAVEGAÇÃO E COMPRA ---
+  irParaPaginaDoJogo(jogo: GameItem): void {
+    this.router.navigate(['/produto', jogo.id]);
+  }
+
+  comprarAgora(jogo: GameItem) {
+    // sem preço válido não dá para comprar direto: abre a página do jogo
+    if (jogo.priceValue <= 0 && jogo.promoPrice !== 'Grátis') {
+      this.irParaPaginaDoJogo(jogo);
+      return;
+    }
+
     this.carrinhoFacade.adicionarProduto({
       id: jogo.id,
       nome: jogo.title,
-      preco: precoNumerico,
+      preco: jogo.priceValue,
       quantidade: 1,
-      imagemUrl: jogo.image,
-      plataforma: 'PC',
+      imagemUrl: jogo.capa,
+      plataforma: jogo.plataforma,
       categoria: 'Jogo',
     });
 
     this.router.navigate(['/carrinho']);
   }
 
+  // --- CARROSSEL DO BANNER ---
   startAutoSlide() {
+    this.stopAutoSlide();
     this.autoSlideTimer = setInterval(() => {
       this.nextHero();
     }, 5000);
@@ -189,10 +253,12 @@ export class Home implements OnInit, OnDestroy {
   stopAutoSlide() {
     if (this.autoSlideTimer) {
       clearInterval(this.autoSlideTimer);
+      this.autoSlideTimer = undefined;
     }
   }
 
   prevHero() {
+    if (!this.heroGames.length) return;
     this.stopAutoSlide();
     this.activeHeroIndex =
       (this.activeHeroIndex - 1 + this.heroGames.length) % this.heroGames.length;
@@ -200,6 +266,7 @@ export class Home implements OnInit, OnDestroy {
   }
 
   nextHero() {
+    if (!this.heroGames.length) return;
     this.activeHeroIndex = (this.activeHeroIndex + 1) % this.heroGames.length;
   }
 

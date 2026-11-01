@@ -149,21 +149,30 @@
         #rlaCarrinho="routerLinkActive"
         (click)="fecharMenu()"
       >
+        <span class="carrinho-icone">
+          <img
+            [src]="
+              rlaCarrinho.isActive
+                ? '/img/bau-de-tesouro.png'
+                : '/img/bau-de-tesouro-fechado.png'
+            "
+            alt="Carrinho"
+            class="nav-icon"
+          />
 
-        <img
-          [src]="
-            rlaCarrinho.isActive
-              ? '/img/bau-de-tesouro.png'
-              : '/img/bau-de-tesouro-fechado.png'
-          "
-          alt="Carrinho"
-          class="nav-icon"
-        />
+          @if (badgeVisivel() && carrinhoFacade.quantidade() > 0) {
+            <span
+              class="carrinho-badge"
+              [class.pulo]="badgePulando()"
+              [attr.aria-label]="carrinhoFacade.quantidade() + ' itens no carrinho'"
+            >
+              {{ carrinhoFacade.quantidade() > 99 ? '99+' : carrinhoFacade.quantidade() }}
+            </span>
+          }
+        </span>
 
         <span>CARRINHO</span>
-
       </button>
-
 
       <!-- SOBRE -->
       <button

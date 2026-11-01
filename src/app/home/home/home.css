@@ -486,3 +486,34 @@
     display: none;
   }
 }
+
+
+/* ==========================================================================
+   CARDS DAS OFERTAS: formato original (240 x 150)
+   ========================================================================== */
+.offers-grid .game-card {
+  min-width: 240px;
+  max-width: 240px;
+}
+
+.offers-grid .card-image-box {
+  position: relative;
+  width: 100%;
+  height: 150px;
+  aspect-ratio: auto;
+  background: #0a1626;
+}
+
+.offers-grid .card-image-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* gênero abaixo do título: uma linha só, com reticências se for longo */
+.card-publisher {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
