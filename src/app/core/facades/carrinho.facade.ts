@@ -1,26 +1,32 @@
+import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { Auth, user } from '@angular/fire/auth';
-import { Firestore, doc, docData, setDoc } from '@angular/fire/firestore';
-import { Subscription } from 'rxjs';
-import { CarrinhoService } from '../services/carrinho.service';
+import { catchError, from, switchMap, throwError } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import { ItemCarrinho } from '../models/item-carrinho';
+import { AuthService } from '../services/auth';
+import { CarrinhoService } from '../services/carrinho.service';
 
-@Injectable({
-  providedIn: 'root',
-})
+interface CartResponse {
+  items: Array<{
+    product_id: string;
+    quantity: number;
+    products: {
+      name: string;
+      image_url: string | null;
+      price_cents: number;
+    } | null;
+  }>;
+}
+
+@Injectable({ providedIn: 'root' })
 export class CarrinhoFacade {
-  private carrinhoService = inject(CarrinhoService);
-  private auth = inject(Auth);
-  private firestore = inject(Firestore);
-  private platformId = inject(PLATFORM_ID);
+  private readonly carrinhoService = inject(CarrinhoService);
+  private readonly authService = inject(AuthService);
+  private readonly http = inject(HttpClient);
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly userId = signal<string | null>(null);
 
-  private user$ = user(this.auth);
-  private firestoreSub?: Subscription;
-  private userId = signal<string | null>(null);
-  private isCarregandoNuvem = false;
-
-  // Exposição das propriedades reativas para todo o resto do app
   itens = this.carrinhoService.itens;
   quantidade = this.carrinhoService.quantidade;
   total = this.carrinhoService.total;
@@ -28,151 +34,122 @@ export class CarrinhoFacade {
 
   constructor() {
     if (isPlatformBrowser(this.platformId)) {
-      this.iniciarMonitoramentoAuth();
-    }
-  }
-
-  // 1. Escuta Login / Logout
-  private iniciarMonitoramentoAuth(): void {
-    this.user$.subscribe((usr) => {
-      if (usr) {
-        const uidAnterior = this.userId();
-        this.userId.set(usr.uid);
-
-        // Se logou ou trocou de usuário, busca os itens da nuvem
-        if (uidAnterior !== usr.uid) {
-          this.sincronizarComFirestore(usr.uid);
+      this.authService.usuarioAtual$.subscribe((usuario) => {
+        const trocouUsuario = this.userId() !== usuario?.id;
+        this.userId.set(usuario?.id ?? null);
+        if (!trocouUsuario) {
+          return;
         }
-      } else {
-        const estavaLogado = !!this.userId();
-        this.userId.set(null);
-
-        if (this.firestoreSub) {
-          this.firestoreSub.unsubscribe();
-          this.firestoreSub = undefined;
-        }
-
-        // Ao deslogar, limpa o carrinho local para segurança
-        if (estavaLogado) {
+        if (usuario) {
+          this.carregarCarrinhoDaApi();
+        } else {
           this.carrinhoService.limpar();
         }
-      }
-    });
+      });
+    }
   }
 
   adicionarProduto(produto: ItemCarrinho): void {
     this.carrinhoService.adicionar(produto);
-    this.salvarSeLogado();
+    this.sincronizarItem(produto);
   }
 
   aumentarQuantidade(indice: number): void {
+    const item = this.itens()[indice];
     this.carrinhoService.aumentarQuantidade(indice);
-    this.salvarSeLogado();
+    if (item) {
+      this.sincronizarItem({ ...item, quantidade: (item.quantidade ?? 1) + 1 });
+    }
   }
 
   diminuirQuantidade(indice: number): void {
+    const item = this.itens()[indice];
     this.carrinhoService.diminuirQuantidade(indice);
-    this.salvarSeLogado();
+    if (item && (item.quantidade ?? 1) > 1) {
+      this.sincronizarItem({ ...item, quantidade: (item.quantidade ?? 1) - 1 });
+    }
   }
 
   removerItem(indice: number): void {
+    const item = this.itens()[indice];
     this.carrinhoService.removerPorIndice(indice);
-    this.salvarSeLogado();
+    if (item) {
+      this.removerItemDaApi(item);
+    }
   }
 
-  // Limpa carrinho: limpa LocalStorage e atualiza a Nuvem (se logado)
   limparCarrinho(): void {
     this.carrinhoService.limpar();
-    this.salvarSeLogado();
-  }
-
-  private salvarSeLogado(): void {
-    const uid = this.userId();
-    if (uid && !this.isCarregandoNuvem) {
-      this.salvarNoFirestore(uid, this.itens());
-    }
-  }
-
-  // 2. Busca na nuvem (Firestore) e preenche a máquina atual
-  private sincronizarComFirestore(uid: string): void {
-    if (this.firestoreSub) {
-      this.firestoreSub.unsubscribe();
-    }
-
-    const docRef = doc(this.firestore, `carrinhos/${uid}`);
-    let primeiraLeitura = true;
-    this.isCarregandoNuvem = true;
-
-    this.firestoreSub = docData(docRef).subscribe({
-      next: (dadosNuvem: any) => {
-        const itensNuvem: ItemCarrinho[] = dadosNuvem?.itens || [];
-        const itensLocais = this.itens();
-
-        if (primeiraLeitura) {
-          primeiraLeitura = false;
-          this.isCarregandoNuvem = false;
-
-          if (itensLocais.length > 0) {
-            // Caso tenha itens no dispositivo antes de logar, junta com o que está na nuvem
-            const itensMesclados = this.mesclarCarrinhos(itensNuvem, itensLocais);
-            this.carrinhoService.definirItens(itensMesclados);
-            this.salvarNoFirestore(uid, itensMesclados);
-          } else {
-            // Caso do PC/Outro dispositivo novo: carrega direto da nuvem para o LocalStorage do PC!
-            this.carrinhoService.definirItens(itensNuvem);
-          }
-        } else {
-          // Atualização em tempo real caso o carrinho seja modificado em outro dispositivo aberto
-          if (!this.saoIguais(itensNuvem, itensLocais)) {
-            this.carrinhoService.definirItens(itensNuvem);
-          }
-        }
-      },
-      error: (err) => {
-        console.error('Erro ao sincronizar carrinho com Firestore:', err);
-        this.isCarregandoNuvem = false;
-      },
-    });
-  }
-
-  // 3. Junta os itens da nuvem com os locais sem duplicar
-  private mesclarCarrinhos(nuvem: ItemCarrinho[], local: ItemCarrinho[]): ItemCarrinho[] {
-    const mapa = new Map<string, ItemCarrinho>();
-
-    nuvem.forEach((item) => {
-      const chave = item.id !== undefined && item.id !== null ? String(item.id) : item.nome;
-      mapa.set(chave, { ...item, quantidade: item.quantidade || 1 });
-    });
-
-    local.forEach((item) => {
-      const chave = item.id !== undefined && item.id !== null ? String(item.id) : item.nome;
-      if (mapa.has(chave)) {
-        const itemExistente = mapa.get(chave)!;
-        itemExistente.quantidade = (itemExistente.quantidade || 1) + (item.quantidade || 1);
-      } else {
-        mapa.set(chave, { ...item, quantidade: item.quantidade || 1 });
-      }
-    });
-
-    return Array.from(mapa.values());
-  }
-
-  // 4. Compara se duas listas são iguais para evitar chamadas redundantes
-  private saoIguais(a: ItemCarrinho[], b: ItemCarrinho[]): boolean {
-    if (a.length !== b.length) return false;
-    return JSON.stringify(a) === JSON.stringify(b);
-  }
-
-  // 5. Salva na nuvem no documento carrinhos/{uid}
-  private async salvarNoFirestore(uid: string, itens: ItemCarrinho[]): Promise<void> {
-    try {
-      const docRef = doc(this.firestore, `carrinhos/${uid}`);
-      await setDoc(docRef, {
-        itens,
-        atualizadoEm: new Date().toISOString(),
+    if (this.userId()) {
+      this.requestWithToken('delete', '/api/cart').subscribe({
+        error: (error) => console.error('Erro ao limpar carrinho na API', error),
       });
-    } catch (err) {
-      console.error('Erro ao salvar carrinho no Firestore:', err);
     }
+  }
+
+  private carregarCarrinhoDaApi(): void {
+    this.requestWithToken<CartResponse>('get', '/api/cart').subscribe({
+      next: (response) => {
+        this.carrinhoService.definirItens(
+          response.items
+            .filter((item) => item.products)
+            .map((item) => ({
+              id: item.product_id,
+              nome: item.products!.name,
+              preco: item.products!.price_cents / 100,
+              quantidade: item.quantity,
+              imagemUrl: item.products!.image_url ?? undefined,
+            })),
+        );
+      },
+      error: (error) => console.error('Erro ao carregar carrinho da API', error),
+    });
+  }
+
+  private sincronizarItem(item: ItemCarrinho): void {
+    if (!this.userId() || !this.isUuid(item.id)) {
+      return;
+    }
+    this.requestWithToken('post', '/api/cart/items', {
+      productId: item.id,
+      quantity: item.quantidade ?? 1,
+    }).subscribe({
+      error: (error) => console.error('Erro ao sincronizar item do carrinho', error),
+    });
+  }
+
+  private removerItemDaApi(item: ItemCarrinho): void {
+    if (!this.userId() || !this.isUuid(item.id)) {
+      return;
+    }
+    this.requestWithToken('delete', `/api/cart/items/${item.id}`).subscribe({
+      error: (error) => console.error('Erro ao remover item do carrinho na API', error),
+    });
+  }
+
+  private requestWithToken<T>(method: 'get' | 'post' | 'delete', path: string, body?: object) {
+    return from(this.authService.obterAccessToken()).pipe(
+      switchMap((token) => {
+        if (!token) {
+          throw new Error('No Supabase access token available.');
+        }
+        const options = { headers: { Authorization: `Bearer ${token}` } };
+        if (method === 'get') {
+          return this.http.get<T>(`${environment.backendUrl}${path}`, options);
+        }
+        if (method === 'post') {
+          return this.http.post<T>(`${environment.backendUrl}${path}`, body, options);
+        }
+        return this.http.delete<T>(`${environment.backendUrl}${path}`, options);
+      }),
+      catchError((error) => {
+        console.error(`Cart API request failed: ${method.toUpperCase()} ${path}`, error);
+        return throwError(() => error);
+      }),
+    );
+  }
+
+  private isUuid(value: ItemCarrinho['id']): value is string {
+    return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
   }
 }

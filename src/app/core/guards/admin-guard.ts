@@ -1,18 +1,16 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { Auth, user } from '@angular/fire/auth';
 import { map, take } from 'rxjs';
-
-const EMAIL_ADMIN = 'admin@email.com';
+import { AuthService } from '../services/auth';
 
 export const adminGuard: CanActivateFn = () => {
-  const auth = inject(Auth);
+  const auth = inject(AuthService);
   const router = inject(Router);
 
-  return user(auth).pipe(
+  return auth.usuarioAtual$.pipe(
     take(1),
     map((usuario) => {
-      if (usuario?.email === EMAIL_ADMIN) {
+      if (usuario?.role === 'admin') {
         return true;
       }
       router.navigate(['/']);

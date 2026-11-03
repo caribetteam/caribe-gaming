@@ -57,3 +57,27 @@ Angular CLI does not come with an end-to-end testing framework by default. You c
 ## Additional Resources
 
 For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+## Desenvolvimento local
+
+Frontend:
+
+```bash
+npm install
+npm run build
+```
+
+Backend:
+
+```bash
+cd backend
+cp .env.example .env
+npm install
+npm run typecheck
+npm run dev
+```
+
+O backend inicia em `APP_MODE=local` sem exigir serviços externos. Para
+habilitar a integração, configure as credenciais no `.env` do backend e a URL
+e a chave anon do Supabase em `src/environments/environment.ts`. Chaves de
+serviço, pagamento e provedores externos devem permanecer exclusivamente no
+backend.
