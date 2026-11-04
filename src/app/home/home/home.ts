@@ -127,38 +127,7 @@ export class Home implements OnInit, OnDestroy {
   }
 
   irParaPaginaDoJogo(jogo: GameItem): void {
-    const id = String(jogo.id);
-
-    if (jogo.id >= 21) {
-      this.router.navigate(['/produto', jogo.slug || id]);
-      return;
-    }
-
-    switch (id) {
-      case '1': this.router.navigate(['/jogos/grand-theft-auto-v']); break;
-      case '2': this.router.navigate(['/jogos/the-witcher-3']); break;
-      case '3': this.router.navigate(['/jogos/the-sims-4']); break;
-      case '4': this.router.navigate(['/jogos/god-of-war']); break;
-      case '5': this.router.navigate(['/jogos/marvels-spider-man-remastered']); break;
-      case '6': this.router.navigate(['/jogos/call-of-duty-modern-warfare-ii']); break;
-      case '7': this.router.navigate(['/jogos/a-plague-tale']); break;
-      case '8': this.router.navigate(['/jogos/god-of-war-ragnarök']); break;
-      case '9': this.router.navigate(['/jogos/hollow-knight']); break;
-      case '10': this.router.navigate(['/jogos/red-dead-redemption-2']); break;
-      case '11': this.router.navigate(['/jogos/assassins-creed-iv-black-flag']); break;
-      case '12': this.router.navigate(['/jogos/yakuza-0']); break;
-      case '13': this.router.navigate(['/jogos/ea-sports-fc-24']); break;
-      case '14': this.router.navigate(['/jogos/life-is-strange']); break;
-      case '15': this.router.navigate(['/jogos/the-last-of-Us']); break;
-      case '16': this.router.navigate(['/jogos/f1-23']); break;
-      case '17': this.router.navigate(['/jogos/elden-ring']); break;
-      case '18': this.router.navigate(['/jogos/cyberpunk-2077']); break;
-      case '19': this.router.navigate(['/jogos/marvel-rivals']); break;
-      case '20': this.router.navigate(['/jogos/the-last-of-us-II']); break;
-      default:
-        this.router.navigate(['/produto', jogo.slug || id]);
-        break;
-    }
+    this.router.navigate(['/produto', jogo.slug || String(jogo.id)]);
   }
 
   comprarAgora(jogo: GameItem) {

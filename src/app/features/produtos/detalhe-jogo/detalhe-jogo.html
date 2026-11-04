@@ -1,0 +1,68 @@
+<main class="pagina-detalhes">
+  <nav class="cabecalho-navegacao">
+    <a class="btn-voltar" routerLink="/jogos">← Voltar aos jogos</a>
+  </nav>
+
+  <p *ngIf="carregando()">Carregando produto...</p>
+
+  <section class="estado-alternativo" *ngIf="!carregando() && naoEncontrado()">
+    <h1>Produto não encontrado</h1>
+    <a class="btn-comprar" routerLink="/jogos">Voltar ao catálogo</a>
+  </section>
+
+  <ng-container *ngIf="produto() as jogo">
+    <div class="grid-principal">
+      <section class="secao-midia">
+        <div class="container-imagem-destaque">
+          <img class="img-destaque" [src]="jogo.imagem" [alt]="jogo.nome" />
+        </div>
+      </section>
+
+      <section class="secao-info">
+        <span class="categoria-tag">{{ jogo.genero || 'Jogo' }}</span>
+        <h1 class="titulo-jogo">{{ jogo.nome }}</h1>
+        <p class="subtitulos">{{ jogo.plataforma }}</p>
+
+        <div class="card-compra">
+          <div class="precos-linha">
+            <span class="preco-promo">{{ jogo.precoPromocional }}</span>
+          </div>
+          <div class="acoes-botoes">
+            <button class="btn-adicionar" type="button" (click)="adicionarAoCarrinho()">
+              Adicionar ao carrinho
+            </button>
+            <button
+              class="btn-favorito"
+              type="button"
+              [class.favoritado]="ehFavorito()"
+              (click)="toggleFavorito()">
+              {{ ehFavorito() ? '♥' : '♡' }}
+            </button>
+            <button class="btn-comprar" type="button" (click)="comprarAgora()">
+              Comprar agora
+            </button>
+          </div>
+        </div>
+
+        <div class="tabela-fatos">
+          <div class="fato-linha">
+            <span>Plataforma</span><strong>{{ jogo.plataforma }}</strong>
+          </div>
+          <div class="fato-linha" *ngIf="jogo.steamAppId">
+            <span>Steam App ID</span><strong>{{ jogo.steamAppId }}</strong>
+          </div>
+          <div class="fato-linha"><span>Categoria</span><strong>{{ jogo.genero || 'Jogo' }}</strong></div>
+        </div>
+      </section>
+    </div>
+
+    <section class="secao-detalhada">
+      <h2>Sobre este jogo</h2>
+      <p class="descricao-paragrafo">
+        {{ jogo.descricaoCustom || 'Prepare-se para uma nova aventura no Caribe Gaming.' }}
+      </p>
+    </section>
+  </ng-container>
+
+  <p class="toast-notificacao" *ngIf="mensagem()">{{ mensagem() }}</p>
+</main>

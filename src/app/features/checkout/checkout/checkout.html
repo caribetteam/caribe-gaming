@@ -50,15 +50,17 @@
         </div>
 
         <div class="field-group">
-          <label class="field-label">Endereço de Cobrança</label>
+          <label class="field-label">CPF ou CNPJ</label>
           <input
             type="text"
-            formControlName="endereco"
-            placeholder="Rua, Número, Bairro, Cidade - UF"
-            [class.input-erro]="campoInvalido('endereco')"
+            formControlName="cpfCnpj"
+            inputmode="numeric"
+            autocomplete="off"
+            placeholder="Somente números"
+            [class.input-erro]="campoInvalido('cpfCnpj')"
           />
-          @if (campoInvalido('endereco')) {
-            <small>Por favor, informe seu endereço para emissão do recibo.</small>
+          @if (campoInvalido('cpfCnpj')) {
+            <small>Informe um CPF ou CNPJ válido para a cobrança Sandbox.</small>
           }
         </div>
 
@@ -108,10 +110,14 @@
           type="button"
           class="btn-acao btn-primary btn-finalizar"
           (click)="finalizar()"
-          [disabled]="formulario.invalid"
+          [disabled]="formulario.invalid || processando()"
         >
-          <i class="fa-solid fa-lock"></i> Finalizar Compra Segura
+          <i class="fa-solid fa-lock"></i>
+          {{ processando() ? 'Processando...' : 'Finalizar Compra Segura' }}
         </button>
+        @if (mensagemErro()) {
+          <div class="mensagem-erro" role="alert">{{ mensagemErro() }}</div>
+        }
       </form>
 
       <!-- RESUMO DETALHADO DO PEDIDO -->

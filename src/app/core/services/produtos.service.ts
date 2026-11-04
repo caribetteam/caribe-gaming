@@ -1,5 +1,7 @@
-import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { Observable, catchError, map, of } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 export interface Produto {
   id: string;
@@ -15,6 +17,27 @@ export interface Produto {
   imagem?: string;
   imagemPosicao?: string;
   descricaoCustom?: string;
+}
+
+interface ProdutoApi {
+  id: string;
+  slug: string;
+  name: string;
+  steam_app_id: number | null;
+  price_cents: number;
+  currency: string;
+  category: string | null;
+  platform: string;
+  image_url: string | null;
+  active: boolean;
+}
+
+interface ProdutosResponse {
+  products: ProdutoApi[];
+}
+
+interface ProdutoResponse {
+  product: ProdutoApi;
 }
 
 type ItemCatalogo = {
@@ -35,6 +58,7 @@ type ItemCatalogo = {
 
 @Injectable({ providedIn: 'root' })
 export class ProdutosService {
+  private readonly http = inject(HttpClient);
 
   readonly listaProdutos: ItemCatalogo[] = [
     { id: '1', nome: 'Grand Theft Auto V', steamAppId: '271590', genero: 'Ação / Mundo Aberto', plat: 'PC', orig: 'R$ 149,90', promo: 'R$ 74,95', desc: 50, categorias: ['mundo-aberto'], slug: 'grand-theft-auto-v' },
@@ -63,7 +87,31 @@ export class ProdutosService {
   ];
 
   obterProdutos(): Observable<Produto[]> {
-    const produtosMapeados: Produto[] = this.listaProdutos.map(item => ({
+    return this.http.get<ProdutosResponse>(`${environment.backendUrl}/api/products`).pipe(
+      map((response) => response.products.map((produto) => this.mapearProdutoApi(produto))),
+      catchError((error) => {
+        console.error('Erro ao carregar produtos pela API; usando fixture local.', error);
+        return of(this.mapearFixture());
+      }),
+    );
+  }
+
+  obterPorSlug(slug: string): Observable<Produto | undefined> {
+    return this.http
+      .get<ProdutoResponse>(
+        `${environment.backendUrl}/api/products/${encodeURIComponent(slug)}`,
+      )
+      .pipe(
+        map((response) => this.mapearProdutoApi(response.product)),
+        catchError((error) => {
+          console.error('Erro ao carregar produto pela API; usando fixture local.', error);
+          return of(this.mapearFixture().find((produto) => produto.slug === slug));
+        }),
+      );
+  }
+
+  private mapearFixture(): Produto[] {
+    return this.listaProdutos.map((item) => ({
       id: item.id,
       nome: item.nome,
       imagem: item.imagemCustom
@@ -79,13 +127,37 @@ export class ProdutosService {
       slug: item.slug,
       steamAppId: item.steamAppId,
     }));
-
-    return of(produtosMapeados);
   }
 
+  private mapearProdutoApi(produto: ProdutoApi): Produto {
+    const preco = this.formatarPreco(produto.price_cents, produto.currency);
+    return {
+      id: produto.id,
+      nome: produto.name,
+      imagem:
+        produto.image_url ??
+        (produto.steam_app_id
+          ? `https://cdn.cloudflare.steamstatic.com/steam/apps/${produto.steam_app_id}/library_600x900.jpg`
+          : undefined),
+      imagemPosicao: 'center',
+      precoOriginal: preco,
+      precoPromocional: preco,
+      desconto: 0,
+      genero: produto.category ?? '',
+      plataforma: produto.platform,
+      categorias: produto.category ? [produto.category] : [],
+      slug: produto.slug,
+      steamAppId: produto.steam_app_id?.toString(),
+    };
+  }
 
-
-
-  
-
+  private formatarPreco(priceCents: number, currency: string): string {
+    if (priceCents === 0) {
+      return 'Grátis';
+    }
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency,
+    }).format(priceCents / 100);
+  }
 }

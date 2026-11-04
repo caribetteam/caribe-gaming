@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { signal } from '@angular/core';
 
 import { Carrinho } from './carrinho';
 import { CarrinhoFacade } from '../../core/facades/carrinho.facade';
@@ -44,6 +45,7 @@ describe('Carrinho', () => {
     limparCarrinho: vi.fn(),
 
     adicionarProduto: vi.fn(),
+    erroSincronizacao: signal<string | null>(null),
   };
 
   const authFacadeMock = {
@@ -98,7 +100,7 @@ describe('Carrinho', () => {
      * Por isso não usamos .btn-finalizar.
      */
 
-    const botao = fixture.nativeElement.querySelector('.btn-acao.btn-primary') as HTMLButtonElement;
+    const botao = fixture.nativeElement.querySelector('.btn-finalizar') as HTMLButtonElement;
 
     expect(botao).toBeTruthy();
 

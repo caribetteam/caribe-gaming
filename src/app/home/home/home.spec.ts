@@ -58,7 +58,7 @@ describe('Home Component - Navegação e Troca de Banner', () => {
   it('deve exibir o título do primeiro jogo por padrão ao carregar', async () => {
     await renderHomeComponent();
 
-    const gameTitle = screen.getByText(/Marvel's Spider-Man Remastered/i);
+    const gameTitle = screen.getAllByText(/Marvel's Spider-Man Remastered/i)[0];
     expect(gameTitle).toBeTruthy();
   });
 
@@ -71,7 +71,7 @@ describe('Home Component - Navegação e Troca de Banner', () => {
     const secondSlideIndicator = screen.getByText('02');
     await fireEvent.click(secondSlideIndicator);
 
-    const secondGameTitle = screen.getByText(/Formula 1 2023/i);
+    const secondGameTitle = screen.getAllByText(/Formula 1 2023/i)[0];
     expect(secondGameTitle).toBeTruthy();
   });
 
@@ -89,7 +89,7 @@ describe('Home Component - Navegação e Troca de Banner', () => {
     const firstSlideIndicator = screen.getByText('01');
     await fireEvent.click(firstSlideIndicator);
 
-    const firstGameTitle = screen.getByText(/Marvel's Spider-Man Remastered/i);
+    const firstGameTitle = screen.getAllByText(/Marvel's Spider-Man Remastered/i)[0];
     expect(firstGameTitle).toBeTruthy();
   });
 });

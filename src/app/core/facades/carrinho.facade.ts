@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable, inject, signal, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { catchError, from, switchMap, throwError } from 'rxjs';
+import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
+import { catchError, Observable, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ItemCarrinho } from '../models/item-carrinho';
 import { AuthService } from '../services/auth';
@@ -27,6 +27,8 @@ export class CarrinhoFacade {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly userId = signal<string | null>(null);
 
+  readonly erroSincronizacao = signal<string | null>(null);
+
   itens = this.carrinhoService.itens;
   quantidade = this.carrinhoService.quantidade;
   total = this.carrinhoService.total;
@@ -37,9 +39,12 @@ export class CarrinhoFacade {
       this.authService.usuarioAtual$.subscribe((usuario) => {
         const trocouUsuario = this.userId() !== usuario?.id;
         this.userId.set(usuario?.id ?? null);
+        this.erroSincronizacao.set(null);
+
         if (!trocouUsuario) {
           return;
         }
+
         if (usuario) {
           this.carregarCarrinhoDaApi();
         } else {
@@ -51,44 +56,63 @@ export class CarrinhoFacade {
 
   adicionarProduto(produto: ItemCarrinho): void {
     this.carrinhoService.adicionar(produto);
-    this.sincronizarItem(produto);
+    if (this.isUuid(produto.id)) {
+      this.sincronizarItem(produto.id, this.obterQuantidade(produto.id));
+    }
   }
 
   aumentarQuantidade(indice: number): void {
     const item = this.itens()[indice];
+    if (!item) {
+      return;
+    }
+
     this.carrinhoService.aumentarQuantidade(indice);
-    if (item) {
-      this.sincronizarItem({ ...item, quantidade: (item.quantidade ?? 1) + 1 });
+    if (this.isUuid(item.id)) {
+      this.atualizarQuantidadeNaApi(item.id, this.obterQuantidade(item.id));
     }
   }
 
   diminuirQuantidade(indice: number): void {
     const item = this.itens()[indice];
+    if (!item || (item.quantidade ?? 1) <= 1) {
+      return;
+    }
+
     this.carrinhoService.diminuirQuantidade(indice);
-    if (item && (item.quantidade ?? 1) > 1) {
-      this.sincronizarItem({ ...item, quantidade: (item.quantidade ?? 1) - 1 });
+    if (this.isUuid(item.id)) {
+      this.atualizarQuantidadeNaApi(item.id, this.obterQuantidade(item.id));
     }
   }
 
   removerItem(indice: number): void {
     const item = this.itens()[indice];
     this.carrinhoService.removerPorIndice(indice);
-    if (item) {
-      this.removerItemDaApi(item);
+
+    if (item && this.isUuid(item.id)) {
+      this.executarRequisicao(
+        this.http.delete<void>(`${environment.backendUrl}/api/cart/items/${item.id}`),
+        'Não foi possível remover o item do carrinho na nuvem.',
+      ).subscribe();
     }
   }
 
   limparCarrinho(): void {
     this.carrinhoService.limpar();
+
     if (this.userId()) {
-      this.requestWithToken('delete', '/api/cart').subscribe({
-        error: (error) => console.error('Erro ao limpar carrinho na API', error),
-      });
+      this.executarRequisicao(
+        this.http.delete<void>(`${environment.backendUrl}/api/cart`),
+        'Não foi possível limpar o carrinho na nuvem.',
+      ).subscribe();
     }
   }
 
   private carregarCarrinhoDaApi(): void {
-    this.requestWithToken<CartResponse>('get', '/api/cart').subscribe({
+    this.executarRequisicao(
+      this.http.get<CartResponse>(`${environment.backendUrl}/api/cart`),
+      'Não foi possível carregar o carrinho da nuvem.',
+    ).subscribe({
       next: (response) => {
         this.carrinhoService.definirItens(
           response.items
@@ -102,54 +126,44 @@ export class CarrinhoFacade {
             })),
         );
       },
-      error: (error) => console.error('Erro ao carregar carrinho da API', error),
     });
   }
 
-  private sincronizarItem(item: ItemCarrinho): void {
-    if (!this.userId() || !this.isUuid(item.id)) {
-      return;
-    }
-    this.requestWithToken('post', '/api/cart/items', {
-      productId: item.id,
-      quantity: item.quantidade ?? 1,
-    }).subscribe({
-      error: (error) => console.error('Erro ao sincronizar item do carrinho', error),
-    });
-  }
-
-  private removerItemDaApi(item: ItemCarrinho): void {
-    if (!this.userId() || !this.isUuid(item.id)) {
-      return;
-    }
-    this.requestWithToken('delete', `/api/cart/items/${item.id}`).subscribe({
-      error: (error) => console.error('Erro ao remover item do carrinho na API', error),
-    });
-  }
-
-  private requestWithToken<T>(method: 'get' | 'post' | 'delete', path: string, body?: object) {
-    return from(this.authService.obterAccessToken()).pipe(
-      switchMap((token) => {
-        if (!token) {
-          throw new Error('No Supabase access token available.');
-        }
-        const options = { headers: { Authorization: `Bearer ${token}` } };
-        if (method === 'get') {
-          return this.http.get<T>(`${environment.backendUrl}${path}`, options);
-        }
-        if (method === 'post') {
-          return this.http.post<T>(`${environment.backendUrl}${path}`, body, options);
-        }
-        return this.http.delete<T>(`${environment.backendUrl}${path}`, options);
+  private sincronizarItem(productId: string, quantity: number): void {
+    this.executarRequisicao(
+      this.http.post(`${environment.backendUrl}/api/cart/items`, {
+        productId,
+        quantity,
       }),
+      'Não foi possível adicionar o item ao carrinho na nuvem.',
+    ).subscribe();
+  }
+
+  private atualizarQuantidadeNaApi(productId: string, quantity: number): void {
+    this.executarRequisicao(
+      this.http.patch(`${environment.backendUrl}/api/cart/items/${productId}`, { quantity }),
+      'Não foi possível atualizar a quantidade na nuvem.',
+    ).subscribe();
+  }
+
+  private obterQuantidade(productId: string): number {
+    return this.itens().find((item) => String(item.id) === productId)?.quantidade ?? 1;
+  }
+
+  private executarRequisicao<T>(request: Observable<T>, mensagem: string) {
+    return request.pipe(
       catchError((error) => {
-        console.error(`Cart API request failed: ${method.toUpperCase()} ${path}`, error);
+        this.erroSincronizacao.set(mensagem);
+        console.error(mensagem, error);
         return throwError(() => error);
       }),
     );
   }
 
   private isUuid(value: ItemCarrinho['id']): value is string {
-    return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+    return (
+      typeof value === 'string' &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+    );
   }
 }

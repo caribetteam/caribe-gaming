@@ -2,8 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { AuthFacade } from '../../core/facades/auth.facade';
-import { ProdutosService } from '../../core/services/produtos.service';
-import { PainelAdminMockService } from '../../core/services/painel-admin-mock.service';
+import { AdminDataService } from '../../core/services/admin-data.service';
 
 @Component({
   selector: 'app-admin',
@@ -14,24 +13,22 @@ import { PainelAdminMockService } from '../../core/services/painel-admin-mock.se
 })
 export class Admin {
   authFacade = inject(AuthFacade);
-  private produtosService = inject(ProdutosService);
-  private painelAdminMockService = inject(PainelAdminMockService);
+  private adminDataService = inject(AdminDataService);
 
   produtosCadastrados = signal(0);
   pedidosPendentes = signal(0);
   usuariosCadastrados = signal(0);
 
   constructor() {
-    this.produtosService.obterProdutos().subscribe((produtos) => {
-      this.produtosCadastrados.set(produtos.length);
-    });
-
-    this.painelAdminMockService.obterPedidosPendentes().subscribe((pedidos) => {
-      this.pedidosPendentes.set(pedidos.length);
-    });
-
-    this.painelAdminMockService.obterUsuariosCadastrados().subscribe((usuarios) => {
-      this.usuariosCadastrados.set(usuarios.length);
+    this.adminDataService.obterResumo().subscribe({
+      next: (resumo) => {
+        this.produtosCadastrados.set(resumo.products);
+        this.pedidosPendentes.set(resumo.pendingOrders);
+        this.usuariosCadastrados.set(resumo.users);
+      },
+      error: (error) => {
+        console.error('Não foi possível carregar o resumo administrativo.', error);
+      },
     });
   }
 

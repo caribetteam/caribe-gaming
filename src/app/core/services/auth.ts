@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, from, Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { map, switchMap } from 'rxjs/operators';
 import type { User } from '@supabase/supabase-js';
 import { SupabaseService } from './supabase.service';
 import { Usuario } from '../models/usuario';
@@ -17,11 +17,11 @@ export class AuthService {
 
   login(email: string, senha: string): Observable<Usuario> {
     return from(this.supabase.getClient().auth.signInWithPassword({ email, password: senha })).pipe(
-      map(({ data, error }) => {
+      switchMap(({ data, error }) => {
         if (error || !data.user) {
           throw error ?? new Error('Authentication failed.');
         }
-        return this.definirUsuario(data.user);
+        return from(this.definirUsuario(data.user));
       }),
     );
   }
@@ -63,11 +63,11 @@ export class AuthService {
         options: { data: { display_name: nome } },
       }),
     ).pipe(
-      map(({ data, error }) => {
+      switchMap(({ data, error }) => {
         if (error || !data.user) {
           throw error ?? new Error('Registration failed.');
         }
-        return this.definirUsuario(data.user);
+        return from(this.definirUsuario(data.user));
       }),
     );
   }
@@ -87,11 +87,11 @@ export class AuthService {
     return from(
       this.supabase.getClient().auth.updateUser({ data: { display_name: nome } }),
     ).pipe(
-      map(({ data, error }) => {
+      switchMap(({ data, error }) => {
         if (error || !data.user) {
           throw error ?? new Error('Profile update failed.');
         }
-        this.definirUsuario(data.user);
+        return from(this.definirUsuario(data.user)).pipe(map(() => undefined));
       }),
     );
   }
@@ -112,23 +112,40 @@ export class AuthService {
           console.error('Unable to load Supabase session', error);
           return;
         }
-        this.usuarioSubject.next(data.session?.user ? this.definirUsuario(data.session.user) : null);
+        if (data.session?.user) {
+          from(this.definirUsuario(data.session.user)).subscribe();
+        } else {
+          this.usuarioSubject.next(null);
+        }
       });
       client.auth.onAuthStateChange((_event, session) => {
-        this.usuarioSubject.next(session?.user ? this.definirUsuario(session.user) : null);
+        if (session?.user) {
+          from(this.definirUsuario(session.user)).subscribe();
+        } else {
+          this.usuarioSubject.next(null);
+        }
       });
     } catch (error) {
       console.error('Supabase authentication is not configured', error);
     }
   }
 
-  private definirUsuario(user: User): Usuario {
-    const role = user.user_metadata['role'] === 'admin' ? 'admin' : 'customer';
+  private async definirUsuario(user: User): Promise<Usuario> {
+    const { data: profile, error } = await this.supabase
+      .getClient()
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle<{ role: 'customer' | 'admin' }>();
+    if (error) {
+      throw error;
+    }
+
     const usuario: Usuario = {
       id: user.id,
       email: user.email ?? null,
       displayName: user.user_metadata['display_name'] ?? user.user_metadata['full_name'] ?? null,
-      role,
+      role: profile?.role ?? 'customer',
     };
     this.usuarioSubject.next(usuario);
     return usuario;

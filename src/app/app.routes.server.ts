@@ -8,6 +8,10 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Server,
   },
   {
+    path: 'produto/:slug',
+    renderMode: RenderMode.Server,
+  },
+  {
     path: 'sobre-nos',
     renderMode: RenderMode.Prerender, // Ou RenderMode.Server
   },

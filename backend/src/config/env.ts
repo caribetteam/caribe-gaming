@@ -1,16 +1,21 @@
 import 'dotenv/config';
 import { z } from 'zod';
 
+const optionalSecret = z.preprocess(
+  (value) => (value === '' ? undefined : value),
+  z.string().min(1).optional(),
+);
+
 const envSchema = z.object({
   APP_MODE: z.enum(['local', 'integrated']).default('local'),
   PORT: z.coerce.number().int().positive().default(3000),
   CORS_ORIGINS: z.string().default('http://localhost:4200'),
   SUPABASE_URL: z.string().url().optional(),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
+  SUPABASE_SERVICE_ROLE_KEY: optionalSecret,
   ASAAS_API_URL: z.string().url().default('https://api-sandbox.asaas.com/v3'),
-  ASAAS_API_KEY: z.string().min(1).optional(),
-  ASAAS_WEBHOOK_TOKEN: z.string().min(1).optional(),
-  RAWG_API_KEY: z.string().min(1).optional(),
+  ASAAS_API_KEY: optionalSecret,
+  ASAAS_WEBHOOK_TOKEN: optionalSecret,
+  RAWG_API_KEY: optionalSecret,
   RAWG_API_URL: z.string().url().default('https://api.rawg.io/api'),
 });
 

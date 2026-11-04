@@ -5,6 +5,11 @@ import { errorHandler } from './middleware/error-handler.js';
 import { cartRouter } from './routes/cart.js';
 import { favoritesRouter } from './routes/favorites.js';
 import { healthRouter } from './routes/health.js';
+import { productsRouter } from './routes/products.js';
+import { ordersRouter } from './routes/orders.js';
+import { webhooksRouter } from './routes/webhooks.js';
+import { adminRouter } from './routes/admin.js';
+import { rawgRouter } from './routes/rawg.js';
 
 export const app = express();
 
@@ -17,6 +22,11 @@ app.use(
 );
 app.use(express.json({ limit: '100kb' }));
 app.use(healthRouter);
+app.use('/api', productsRouter);
+app.use('/api', ordersRouter);
+app.use('/api', webhooksRouter);
+app.use('/api', adminRouter);
+app.use('/api', rawgRouter);
 app.use('/api', cartRouter);
 app.use('/api', favoritesRouter);
 app.use('/api', (_request, response) => {

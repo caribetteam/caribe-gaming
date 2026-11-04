@@ -39,16 +39,15 @@ export interface RawgScreenshotResponse {
 @Injectable({ providedIn: 'root' })
 export class RawgService {
   private http = inject(HttpClient);
-  private apiKey = '4e45dbce048d41c4adcfabbf27dbb16e';
-  private baseUrl = 'https://api.rawg.io/api';
+  private baseUrl = '/api/rawg';
 
   obterDetalhesJogo(jogoIdOuSlug: string | number): Observable<RawgGameResponse> {
-    const url = `${this.baseUrl}/games/${jogoIdOuSlug}?key=${this.apiKey}`;
+    const url = `${this.baseUrl}/games/${encodeURIComponent(String(jogoIdOuSlug))}`;
     return this.http.get<RawgGameResponse>(url);
   }
 
   obterScreenshots(jogoIdOuSlug: string | number): Observable<RawgScreenshotResponse> {
-    const url = `${this.baseUrl}/games/${jogoIdOuSlug}/screenshots?key=${this.apiKey}`;
+    const url = `${this.baseUrl}/games/${encodeURIComponent(String(jogoIdOuSlug))}/screenshots`;
     return this.http.get<RawgScreenshotResponse>(url);
   }
 }
