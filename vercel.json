@@ -1,3 +1,4 @@
+
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "services": {
@@ -18,6 +19,10 @@
     { "source": 
       "/webapi/:path*", 
       "destination": "https://api.steampowered.com/:path*" 
+    },
+    {
+      "source": "/steam/:path*",
+      "destination": "https://store.steampowered.com/:path*"
     },
     {
       "source": "/api/(.*)",
