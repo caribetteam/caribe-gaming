@@ -225,7 +225,7 @@ export const CATALOGO: JogoCatalogo[] = [
   { appid: 1794680, nome: 'Vampire Survivors', plataformas: ['PC'], generos: ['Roguelike', 'Casual'], categorias: ['indie', 'action'] },
   { appid: 1326470, nome: 'Sifu', plataformas: ['PC', 'PS'], generos: ['Ação', 'Luta'], categorias: ['action', 'indie'] },
   { appid: 1740720, nome: 'Lies of P', plataformas: ['PC', 'PS'], generos: ['RPG', 'Souls-like'], categorias: ['role-playing-rpg', 'action'] },
-  { appid: 1286680, nome: 'TUNIC', plataformas: ['PC', 'PS'], generos: ['Aventura', 'Isométrico'], categorias: ['adventure', 'indie'] },
+  { appid: 553420, nome: 'TUNIC', plataformas: ['PC', 'PS'], generos: ['Aventura', 'Isométrico'], categorias: ['adventure', 'indie'] },
   { appid: 1245620, nome: 'ARMORED CORE™ VI FIRES OF RUBICON™', plataformas: ['PC', 'PS'], generos: ['Ação', 'Mecha'], categorias: ['action'] },
   { appid: 594650, nome: 'Kingdom Come: Deliverance', plataformas: ['PC', 'PS'], generos: ['RPG', 'Mundo Aberto'], categorias: ['role-playing-rpg', 'adventure'] },
   { appid: 1771300, nome: 'Kingdom Come: Deliverance II', plataformas: ['PC', 'PS'], generos: ['RPG', 'Mundo Aberto'], categorias: ['role-playing-rpg', 'adventure'] },
