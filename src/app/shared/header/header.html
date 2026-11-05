@@ -158,7 +158,7 @@
       >
         <img
           src="/img/coqueiro.png"
-          alt="Home"
+          alt=""
           class="nav-icon"
         />
 
@@ -175,7 +175,7 @@
       >
         <img
           src="/img/controle-de-video-game.png"
-          alt="Produtos"
+          alt=""
           class="nav-icon"
         />
 
@@ -192,14 +192,18 @@
         (click)="fecharMenu()"
       >
         <span class="carrinho-icone">
+          <!-- os dois ícones ficam sempre carregados; só um aparece (evita texto/imagem quebrada na troca) -->
           <img
-            [src]="
-              rlaCarrinho.isActive
-                ? '/img/bau-de-tesouro.png'
-                : '/img/bau-de-tesouro-fechado.png'
-            "
-            alt="Carrinho"
+            src="/img/bau-de-tesouro-fechado.png"
+            alt=""
             class="nav-icon"
+            [hidden]="rlaCarrinho.isActive"
+          />
+          <img
+            src="/img/bau-de-tesouro.png"
+            alt=""
+            class="nav-icon"
+            [hidden]="!rlaCarrinho.isActive"
           />
 
           @if (badgeVisivel() && carrinhoFacade.quantidade() > 0) {
@@ -225,7 +229,7 @@
       >
         <img
           src="/img/bandeira-pirata.png"
-          alt="Produtos"
+          alt=""
           class="nav-icon"
         />
 
@@ -348,7 +352,7 @@
 
           <img
             src="/img/ancora-de-navio.png"
-            alt="Login"
+            alt=""
             class="nav-icon"
           />
 

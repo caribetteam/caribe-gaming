@@ -2,15 +2,36 @@
   <h2 class="checkout-titulo">Checkout dos Mares</h2>
 
   @if (compraFinalizada()) {
-    <div class="checkout-sucesso">
-      <div class="sucesso-icon">⚓ </div>
-      <h3>Tesouros adquiridos com sucesso!</h3>
-      <p>Seu pedido foi processado com sucesso e os jogos foram liberados para sua tripulação.</p>
-      <p>Sua chave foi encaminhada diretamente para seu email cadastrado, não esqueça de conferir a caixa de span.</p>
-      <button class="btn-acao btn-primary btn-voltar-jogos" routerLink="/jogos">
-        Continuar Navegando
-      </button>
-    </div>
+    @if (pedidoConfirmado(); as p) {
+      <div class="checkout-sucesso">
+        <div class="sucesso-icon">⚓</div>
+        <h3>Tesouros adquiridos com sucesso!</h3>
+        <p>
+          Pagamento via <strong>{{ nomeMetodo(p.metodo) }}</strong> aprovado. Os jogos foram
+          liberados para sua tripulação.
+        </p>
+
+        <div class="sucesso-pedido">
+          <div><span>Pedido</span><strong>{{ p.numero }}</strong></div>
+          <div><span>Total pago</span><strong>{{ moeda(p.total) }}</strong></div>
+        </div>
+
+        @if (emailEnviado()) {
+          <p>Sua chave foi encaminhada para o e-mail cadastrado. Não esqueça de conferir a caixa de spam.</p>
+        } @else if (enviandoEmail()) {
+          <p>Enviando suas chaves por e-mail...</p>
+        } @else if (erroEmail()) {
+          <p class="erro-pagamento" role="alert">{{ erroEmail() }}</p>
+          <button type="button" class="btn-secundario" (click)="reenviarEmail()">
+            Reenviar e-mail
+          </button>
+        }
+
+        <button class="btn-acao btn-primary btn-voltar-jogos" routerLink="/jogos">
+          Continuar Navegando
+        </button>
+      </div>
+    }
   }
 
   @if (carrinhoFacade.carrinhoVazio() && !compraFinalizada()) {
@@ -20,104 +41,342 @@
     </div>
   } @else if (!compraFinalizada()) {
     <div class="checkout-grid">
-      <!-- FORMULÁRIO DE DADOS E PAGAMENTO -->
-      <form class="checkout-form" [formGroup]="formulario">
-        <h3>1. Dados do Aventureiro</h3>
+      @switch (etapa()) {
+        <!-- ============ ETAPA: PIX ============ -->
+        @case ('pix') {
+          <section class="checkout-form painel-pagamento">
+            <h3>⚡ Pague com PIX</h3>
+            <p class="painel-sub">
+              Abra o app do seu banco, escolha <strong>Pix → Ler QR Code</strong> ou use o código
+              copia e cola.
+            </p>
 
-        <div class="field-group">
-          <label class="field-label">Nome Completo</label>
-          <input
-            type="text"
-            formControlName="nome"
-            placeholder="Ex: Edward Kenway"
-            [class.input-erro]="campoInvalido('nome')"
-          />
-          @if (campoInvalido('nome')) {
-            <small>Por favor, informe seu nome completo (mínimo 3 caracteres).</small>
-          }
-        </div>
+            <div class="pix-layout">
+              <div class="qr-box">
+                <svg
+                  class="qr-svg"
+                  viewBox="-2 -2 33 33"
+                  shape-rendering="crispEdges"
+                  role="img"
+                  aria-label="QR Code PIX de demonstração"
+                >
+                  <rect x="-2" y="-2" width="33" height="33" fill="#ffffff" />
+                  @for (ponto of qrPontos(); track $index) {
+                    <rect [attr.x]="ponto.x" [attr.y]="ponto.y" width="1" height="1" fill="#0b1425" />
+                  }
+                </svg>
+              </div>
 
-        <div class="field-group">
-          <label class="field-label">E-mail para Envio das Chaves</label>
-          <input
-            type="email"
-            formControlName="email"
-            placeholder="Ex: capitao@caribe.com"
-            [class.input-erro]="campoInvalido('email')"
-          />
-          @if (campoInvalido('email')) {
-            <small>Informe um e-mail válido para receber as chaves de ativação.</small>
-          }
-        </div>
+              <div class="pix-info">
+                <div class="pix-linha">
+                  <span>Valor</span>
+                  <strong>{{ moeda(totalPedido()) }}</strong>
+                </div>
+                <div class="pix-linha">
+                  <span>Expira em</span>
+                  <strong class="contador">{{ tempoFormatado() }}</strong>
+                </div>
 
-        <div class="field-group">
-          <label class="field-label">Endereço de Cobrança</label>
-          <input
-            type="text"
-            formControlName="endereco"
-            placeholder="Rua, Número, Bairro, Cidade - UF"
-            [class.input-erro]="campoInvalido('endereco')"
-          />
-          @if (campoInvalido('endereco')) {
-            <small>Por favor, informe seu endereço para emissão do recibo.</small>
-          }
-        </div>
+                <label class="field-label">Pix copia e cola</label>
+                <textarea class="pix-codigo" readonly rows="5" [value]="pixCodigo()"></textarea>
 
-        <h3>2. Forma de Pagamento</h3>
-        <div class="metodos-pagamento">
-          <button
-            type="button"
-            class="metodo-card"
-            [class.selecionado]="metodoPagamento() === 'pix'"
-            (click)="selecionarPagamento('pix')"
-          >
-            <span class="metodo-icon">⚡</span>
-            <div class="metodo-info">
-              <strong>PIX</strong>
-              <span>Aprovação instantânea</span>
+                <button type="button" class="btn-copiar" (click)="copiar(pixCodigo(), 'pix')">
+                  {{ copiado() === 'pix' ? '✔ Código copiado!' : '📋 Copiar código' }}
+                </button>
+              </div>
             </div>
-          </button>
 
-          <button
-            type="button"
-            class="metodo-card"
-            [class.selecionado]="metodoPagamento() === 'cartao'"
-            (click)="selecionarPagamento('cartao')"
-          >
-            <span class="metodo-icon">💳</span>
-            <div class="metodo-info">
-              <strong>Cartão de Crédito</strong>
-              <span>Até 12x sem juros</span>
+            <div class="status-aguardando" role="status">
+              <span class="spinner"></span>
+              Aguardando a confirmação do pagamento...
             </div>
-          </button>
 
-          <button
-            type="button"
-            class="metodo-card"
-            [class.selecionado]="metodoPagamento() === 'boleto'"
-            (click)="selecionarPagamento('boleto')"
-          >
-            <span class="metodo-icon">📄</span>
-            <div class="metodo-info">
-              <strong>Boleto Bancário</strong>
-              <span>Compensação em até 2 dias</span>
+            <div class="painel-acoes">
+              <button type="button" class="btn-secundario" (click)="voltarParaDados()">
+                ← Trocar forma de pagamento
+              </button>
+              <button type="button" class="btn-simular" (click)="simularPagamentoAgora()">
+                Simular pagamento agora
+              </button>
             </div>
-          </button>
-        </div>
 
-        <button
-          type="button"
-          class="btn-acao btn-primary btn-finalizar"
-          (click)="finalizar()"
-          [disabled]="formulario.invalid || processandoPagamento()"
-        >
-          <i class="fa-solid fa-lock"></i>
-          {{ processandoPagamento() ? 'Abrindo pagamento...' : 'Pagar com Mercado Pago' }}
-        </button>
-        @if (erroPagamento()) {
-          <p class="erro-pagamento" role="alert">{{ erroPagamento() }}</p>
+            <p class="aviso-simulacao">
+              Ambiente de demonstração: nenhum valor é cobrado de verdade.
+            </p>
+          </section>
         }
-      </form>
+
+        <!-- ============ ETAPA: BOLETO ============ -->
+        @case ('boleto') {
+          <section class="checkout-form painel-pagamento">
+            <h3>📄 Boleto Bancário</h3>
+            <p class="painel-sub">
+              Pague em qualquer banco, lotérica ou app. A compensação pode levar até 2 dias úteis.
+            </p>
+
+            @if (boleto(); as b) {
+              <div class="boleto-ficha">
+                <div class="boleto-topo">
+                  <strong>Caribe's Gaming Ltda.</strong>
+                  <span>Vencimento: <b>{{ b.vencimento }}</b></span>
+                </div>
+
+                <div class="boleto-dados">
+                  <div><span>Pagador</span><strong>{{ formulario.value.nome }}</strong></div>
+                  <div><span>Valor do documento</span><strong>{{ moeda(totalPedido()) }}</strong></div>
+                  <div><span>Endereço do pagador</span><strong>{{ formulario.value.endereco }}</strong></div>
+                </div>
+
+                <div class="boleto-linha-digitavel">{{ b.linhaDigitavel }}</div>
+
+                <div class="barras" aria-hidden="true">
+                  @for (barra of b.barras; track $index) {
+                    <span class="barra" [class.preta]="barra.preta" [style.width.px]="barra.w"></span>
+                  }
+                </div>
+              </div>
+
+              <button
+                type="button"
+                class="btn-copiar"
+                (click)="copiar(b.linhaDigitavel, 'boleto')"
+              >
+                {{ copiado() === 'boleto' ? '✔ Linha digitável copiada!' : '📋 Copiar linha digitável' }}
+              </button>
+            }
+
+            @if (processandoPagamento()) {
+              <div class="status-aguardando" role="status">
+                <span class="spinner"></span>
+                Confirmando a compensação com o banco...
+              </div>
+            }
+
+            <div class="painel-acoes">
+              <button
+                type="button"
+                class="btn-secundario"
+                [disabled]="processandoPagamento()"
+                (click)="voltarParaDados()"
+              >
+                ← Trocar forma de pagamento
+              </button>
+              <button
+                type="button"
+                class="btn-simular"
+                [disabled]="processandoPagamento()"
+                (click)="simularPagamentoBoleto()"
+              >
+                Simular pagamento do boleto
+              </button>
+            </div>
+
+            <p class="aviso-simulacao">
+              Ambiente de demonstração: este boleto não é válido e nenhum valor é cobrado.
+            </p>
+          </section>
+        }
+
+        <!-- ============ ETAPA: DADOS E FORMA DE PAGAMENTO ============ -->
+        @default {
+          <form class="checkout-form" [formGroup]="formulario" novalidate>
+            <h3>1. Dados do Aventureiro</h3>
+
+            <div class="field-group">
+              <label class="field-label">Nome Completo</label>
+              <input
+                type="text"
+                formControlName="nome"
+                placeholder="Ex: Edward Kenway"
+                [class.input-erro]="campoInvalido('nome')"
+              />
+              @if (campoInvalido('nome')) {
+                <small>Por favor, informe seu nome completo (mínimo 3 caracteres).</small>
+              }
+            </div>
+
+            <div class="field-group">
+              <label class="field-label">E-mail para Envio das Chaves</label>
+              <input
+                type="email"
+                formControlName="email"
+                placeholder="Ex: capitao@caribe.com"
+                [class.input-erro]="campoInvalido('email')"
+              />
+              @if (campoInvalido('email')) {
+                <small>Informe um e-mail válido para receber as chaves de ativação.</small>
+              }
+            </div>
+
+            <h3>2. Forma de Pagamento</h3>
+            <div class="metodos-pagamento">
+              <button
+                type="button"
+                class="metodo-card"
+                [class.selecionado]="metodoPagamento() === 'pix'"
+                (click)="selecionarPagamento('pix')"
+              >
+                <span class="metodo-icon">⚡</span>
+                <div class="metodo-info">
+                  <strong>PIX</strong>
+                  <span>Aprovação instantânea</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                class="metodo-card"
+                [class.selecionado]="metodoPagamento() === 'cartao'"
+                (click)="selecionarPagamento('cartao')"
+              >
+                <span class="metodo-icon">💳</span>
+                <div class="metodo-info">
+                  <strong>Cartão de Crédito</strong>
+                  <span>Até 12x sem juros</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                class="metodo-card"
+                [class.selecionado]="metodoPagamento() === 'boleto'"
+                (click)="selecionarPagamento('boleto')"
+              >
+                <span class="metodo-icon">📄</span>
+                <div class="metodo-info">
+                  <strong>Boleto Bancário</strong>
+                  <span>Compensação em até 2 dias</span>
+                </div>
+              </button>
+            </div>
+
+            @if (metodoPagamento() === 'cartao') {
+              <div class="cartao-box" formGroupName="cartao">
+                <div class="field-group">
+                  <label class="field-label">Número do cartão</label>
+                  <div class="input-com-bandeira">
+                    <input
+                      type="text"
+                      inputmode="numeric"
+                      autocomplete="off"
+                      formControlName="numero"
+                      placeholder="0000 0000 0000 0000"
+                      (input)="mascararNumero($event)"
+                      [class.input-erro]="campoInvalido('cartao.numero')"
+                    />
+                    @if (bandeira()) {
+                      <span class="bandeira">{{ bandeira() }}</span>
+                    }
+                  </div>
+                  @if (campoInvalido('cartao.numero')) {
+                    <small>Informe os 16 dígitos do cartão.</small>
+                  }
+                </div>
+
+                <div class="field-group">
+                  <label class="field-label">Nome impresso no cartão</label>
+                  <input
+                    type="text"
+                    autocomplete="off"
+                    formControlName="titular"
+                    placeholder="COMO ESTÁ NO CARTÃO"
+                    (input)="maiusculasTitular($event)"
+                    [class.input-erro]="campoInvalido('cartao.titular')"
+                  />
+                  @if (campoInvalido('cartao.titular')) {
+                    <small>Informe o nome do titular.</small>
+                  }
+                </div>
+
+                <div class="cartao-linha">
+                  <div class="field-group">
+                    <label class="field-label">Validade</label>
+                    <input
+                      type="text"
+                      inputmode="numeric"
+                      autocomplete="off"
+                      formControlName="validade"
+                      placeholder="MM/AA"
+                      (input)="mascararValidade($event)"
+                      [class.input-erro]="campoInvalido('cartao.validade')"
+                    />
+                    @if (campoInvalido('cartao.validade')) {
+                      <small>Validade inválida ou vencida.</small>
+                    }
+                  </div>
+
+                  <div class="field-group">
+                    <label class="field-label">CVV</label>
+                    <input
+                      type="password"
+                      inputmode="numeric"
+                      autocomplete="off"
+                      formControlName="cvv"
+                      placeholder="123"
+                      (input)="mascararCvv($event)"
+                      [class.input-erro]="campoInvalido('cartao.cvv')"
+                    />
+                    @if (campoInvalido('cartao.cvv')) {
+                      <small>3 ou 4 dígitos.</small>
+                    }
+                  </div>
+                </div>
+
+                <div class="field-group">
+                  <label class="field-label">Parcelas</label>
+                  <select formControlName="parcelas">
+                    @for (opcao of parcelasOpcoes(); track opcao.n) {
+                      <option [ngValue]="opcao.n">{{ opcao.texto }}</option>
+                    }
+                  </select>
+                </div>
+
+                <p class="aviso-simulacao">
+                  Ambiente de demonstração: nenhum dado do cartão é enviado ou salvo. Use
+                  <strong>4000 0000 0000 0002</strong> para simular um cartão recusado.
+                </p>
+              </div>
+            }
+
+            <!-- Endereço: só cartão (antifraude) e boleto (dados do pagador) -->
+            @if (precisaEndereco()) {
+              <div class="field-group">
+                <label class="field-label">Endereço de Cobrança</label>
+                <input
+                  type="text"
+                  formControlName="endereco"
+                  placeholder="Rua, Número, Bairro, Cidade - UF"
+                  [class.input-erro]="campoInvalido('endereco')"
+                />
+                @if (campoInvalido('endereco')) {
+                  <small>Por favor, informe seu endereço de cobrança (mínimo 5 caracteres).</small>
+                }
+                <p class="aviso-simulacao">
+                  {{
+                    metodoPagamento() === 'boleto'
+                      ? 'Necessário para emitir o boleto no seu nome.'
+                      : 'Usado pelo banco para validar a compra no cartão.'
+                  }}
+                </p>
+              </div>
+            }
+
+            <button
+              type="button"
+              class="btn-acao btn-primary btn-finalizar"
+              (click)="finalizar()"
+              [disabled]="formulario.invalid || processandoPagamento()"
+            >
+              <i class="fa-solid fa-lock"></i>
+              {{ rotuloBotao }}
+            </button>
+
+            @if (erroPagamento()) {
+              <p class="erro-pagamento" role="alert">{{ erroPagamento() }}</p>
+            }
+          </form>
+        }
+      }
 
       <!-- RESUMO DETALHADO DO PEDIDO -->
       <div class="checkout-lateral">
@@ -137,17 +396,16 @@
                   >
                 </div>
                 <strong class="item-preco">
-                  R$ {{ (item.preco * (item.quantidade || 1)).toFixed(2) }}
+                  {{ moeda(item.preco * (item.quantidade || 1)) }}
                 </strong>
               </div>
             }
           </div>
 
-          <!-- DISCRIMINAÇÃO DE TOTAIS -->
           <div class="checkout-calculo">
             <div class="linha-calculo">
               <span>Subtotal ({{ carrinhoFacade.quantidade() }} itens)</span>
-              <span>R$ {{ carrinhoFacade.total().toFixed(2) }}</span>
+              <span>{{ moeda(carrinhoFacade.total()) }}</span>
             </div>
             <div class="linha-calculo">
               <span>Entrega Digital</span>
@@ -155,7 +413,7 @@
             </div>
             <div class="checkout-total-box">
               <span class="total-label">Total a pagar:</span>
-              <strong class="checkout-total">R$ {{ carrinhoFacade.total().toFixed(2) }}</strong>
+              <strong class="checkout-total">{{ moeda(carrinhoFacade.total()) }}</strong>
             </div>
           </div>
         </section>
