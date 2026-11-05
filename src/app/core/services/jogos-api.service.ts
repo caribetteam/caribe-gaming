@@ -9,9 +9,14 @@ import { DetalhesJogo, JogoCard, Dlc, CATALOGO } from '../models/jogo';
 const STEAM = '/steam';
 const INTERVALO_ATUALIZACAO = 5 * 60 * 1000; // 5 minutos
 const TAMANHO_LOTE = 40;
+const STEAM_ASSETS = 'https://shared.fastly.steamstatic.com/store_item_assets/';
 
-const capa = (appid: number) =>
+// 1) capa manual do catálogo (se houver)  2) capa vertical padrão da Steam (cdn.cloudflare)
+const capaSteam = (appid: number) =>
   `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}/library_600x900.jpg`;
+
+const capaDe = (g: { appid: number; capa?: string }) => g.capa ?? capaSteam(g.appid);
+
 
 function formatarPreco(p: any) {
   if (!p) return null;
@@ -45,6 +50,9 @@ export class JogosApiService {
 
   private detalheCache = new Map<number, Observable<DetalhesJogo>>();
   private dlcCache = new Map<number, Observable<Dlc[]>>();
+  private capaCache = new Map<number, Observable<string | null>>();
+  private horizontalCache = new Map<number, Observable<string | null>>();
+  
 
   // Consulta os preços agora e repete a cada 5 min. Se uma consulta falhar, mantém os últimos preços.
   // refCount: true -> para de consultar quando nenhuma tela estiver usando a lista.
@@ -81,7 +89,7 @@ export class JogosApiService {
           id: g.appid,
           nome: g.nome,
           slug: String(g.appid),
-          capa: capa(g.appid),
+          capa: capaDe(g),
           plataformas: g.plataformas,
           generos: g.generos,
           categorias: g.categorias,
@@ -98,6 +106,71 @@ export class JogosApiService {
       )
     );
   }
+
+  // Só roda quando a capa principal (cdn.cloudflare ou a manual) falhou.
+  // 1º tenta a capa vertical com o endereço certo vindo da API da Steam; 2º a imagem horizontal.
+  obterCapaAlternativa(appid: number): Observable<string | null> {
+    if (!this.noNavegador) return of(null);
+
+    let cached = this.capaCache.get(appid);
+    if (!cached) {
+      const input = JSON.stringify({
+        ids: [{ appid }],
+        context: { language: 'portuguese', country_code: 'BR' },
+        data_request: { include_assets: true },
+      });
+
+      const vertical$ = this.http
+        .get<any>('/webapi/IStoreBrowseService/GetItems/v1/', { params: { input_json: input } })
+        .pipe(
+          map((r) => {
+            const a = r?.response?.store_items?.[0]?.assets;
+            const arquivo = a?.library_capsule_2x ?? a?.library_capsule;
+            if (!a?.asset_url_format || !arquivo) return null;
+            return STEAM_ASSETS + (a.asset_url_format as string).replace('${FILENAME}', arquivo);
+          }),
+          catchError(() => of(null))
+        );
+
+      const horizontal$ = this.http
+        .get<any>(`${STEAM}/api/appdetails`, {
+          params: { appids: appid, cc: 'br', filters: 'basic' },
+        })
+        .pipe(
+          map((r) => (r?.[appid]?.data?.header_image as string | undefined) ?? null),
+          catchError(() => of(null))
+        );
+
+      cached = vertical$.pipe(
+        switchMap((url) => (url ? of(url) : horizontal$)),
+        shareReplay(1)
+      );
+      this.capaCache.set(appid, cached);
+    }
+    return cached;
+  }
+
+  // Imagem horizontal oficial (header) com o endereço certo vindo da API da Steam.
+  // Reserva dos cards da Home, para jogos cujo endereço padrão não existe.
+  obterImagemHorizontal(appid: number): Observable<string | null> {
+    if (!this.noNavegador) return of(null);
+
+    let cached = this.horizontalCache.get(appid);
+    if (!cached) {
+      cached = this.http
+        .get<any>(`${STEAM}/api/appdetails`, {
+          params: { appids: appid, cc: 'br', filters: 'basic' },
+        })
+        .pipe(
+          map((r) => (r?.[appid]?.data?.header_image as string | undefined) ?? null),
+          catchError(() => of(null)),
+          shareReplay(1)
+        );
+      this.horizontalCache.set(appid, cached);
+    }
+    return cached;
+  }
+
 
   obterJogo(id: string): Observable<DetalhesJogo> {
     if (!this.noNavegador) return EMPTY;
@@ -188,12 +261,13 @@ export class JogosApiService {
           ? { nota: ((q.total_positive / q.total_reviews) * 5).toFixed(1), total: q.total_reviews }
           : null;
 
-        const imagens: string[] = (d.screenshots ?? []).map((s: any) => s.path_full);
+        const screenshots: string[] = (d.screenshots ?? []).map((s: any) => s.path_full);
+        const urlCapa = capaDe(meta);
 
         return {
           id: appid,
           nome: d.name,
-          background_image: imagens[0] ?? d.header_image,
+          background_image: d.header_image,
           descricao: d.short_description,
           plataformas: meta.plataformas.join(' / '),
           desenvolvedoras: (d.developers ?? []).join(', '),
@@ -203,7 +277,8 @@ export class JogosApiService {
           generos: (d.genres ?? []).map((g: any) => g.description).join(', '),
           caracteristicas: (d.categories ?? []).map((c: any) => c.description as string),
           dlcIds: (d.dlc ?? []) as number[],
-          imagens,
+          capa: urlCapa,
+          imagens: [urlCapa, ...screenshots], // a capa fica na posição 0 da galeria
           requisitos: {
             minimos: limparRequisitos(d.pc_requirements?.minimum),
             recomendados: limparRequisitos(d.pc_requirements?.recommended),

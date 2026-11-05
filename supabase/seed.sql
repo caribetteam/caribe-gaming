@@ -1,0 +1,43 @@
+insert into public.products (
+  slug,
+  name,
+  steam_app_id,
+  price_cents,
+  currency,
+  category,
+  platform,
+  image_url,
+  active
+)
+values
+  ('grand-theft-auto-v', 'Grand Theft Auto V', 271590, 7495, 'BRL', 'mundo-aberto', 'PC', 'https://cdn.cloudflare.steamstatic.com/steam/apps/271590/library_600x900.jpg', true),
+  ('the-witcher-3-wild-hunt', 'The Witcher 3: Wild Hunt', 292030, 12999, 'BRL', 'rpg', 'PC / PS5', 'https://cdn.cloudflare.steamstatic.com/steam/apps/292030/library_600x900.jpg', true),
+  ('the-sims-4', 'The Sims 4', 1222670, 0, 'BRL', 'simulacao', 'PC', 'https://cdn.cloudflare.steamstatic.com/steam/apps/1222670/library_600x900.jpg', true),
+  ('god-of-war-4', 'God of War', 1593500, 19990, 'BRL', 'acao', 'PC / PS5', 'https://cdn.cloudflare.steamstatic.com/steam/apps/1593500/library_600x900.jpg', true),
+  ('marvels-spider-man-remastered', 'Marvel''s Spider-Man Remastered', 1817070, 19990, 'BRL', 'mundo-aberto', 'PC / PS5', 'https://cdn.cloudflare.steamstatic.com/steam/apps/1817070/library_600x900.jpg', true),
+  ('call-of-duty-modern-warfare-ii-2022', 'Call of Duty: Modern Warfare II', 1938090, 29900, 'BRL', 'acao', 'PC', 'https://cdn.cloudflare.steamstatic.com/steam/apps/1938090/library_600x900.jpg', true),
+  ('a-plague-tale-innocence', 'A Plague Tale: Innocence', 752590, 9160, 'BRL', 'aventura', 'PC', 'https://cdn.cloudflare.steamstatic.com/steam/apps/752590/library_600x900.jpg', true),
+  ('god-of-war-ragnarok', 'God of War Ragnarök', 2322010, 24990, 'BRL', 'acao', 'PC / PS5', 'https://cdn.cloudflare.steamstatic.com/steam/apps/2322010/library_600x900.jpg', true),
+  ('hollow-knight', 'Hollow Knight', 367520, 4699, 'BRL', 'acao', 'PC', 'https://cdn.cloudflare.steamstatic.com/steam/apps/367520/library_600x900.jpg', true),
+  ('red-dead-redemption-2', 'Red Dead Redemption 2', 1174180, 9896, 'BRL', 'mundo-aberto', 'PC / PS5', 'https://cdn.cloudflare.steamstatic.com/steam/apps/1174180/library_600x900.jpg', true),
+  ('assassins-creed-iv-black-flag', 'Assassin’s Creed IV Black Flag', 242050, 11999, 'BRL', 'mundo-aberto', 'PC', 'https://cdn.cloudflare.steamstatic.com/steam/apps/242050/library_600x900.jpg', true),
+  ('yakuza-0', 'Yakuza 0', 638970, 8350, 'BRL', 'mundo-aberto', 'PC', 'https://cdn.cloudflare.steamstatic.com/steam/apps/638970/library_600x900.jpg', true),
+  ('ea-sports-fc-24', 'EA Sports FC 24', 2195250, 35000, 'BRL', 'simulacao', 'PC / PS5', 'https://cdn.cloudflare.steamstatic.com/steam/apps/2195250/library_600x900.jpg', true),
+  ('life-is-strange', 'Life is Strange', 319630, 1980, 'BRL', 'aventura', 'PC', 'https://cdn.cloudflare.steamstatic.com/steam/apps/319630/library_600x900.jpg', true),
+  ('the-last-of-us-part-i', 'The Last of Us Part I', 1888930, 24990, 'BRL', 'aventura', 'PC / PS5', 'https://cdn.cloudflare.steamstatic.com/steam/apps/1888930/library_600x900.jpg', true),
+  ('f1-23', 'F1 23', 2108330, 14360, 'BRL', 'simulacao', 'PC', 'https://cdn.cloudflare.steamstatic.com/steam/apps/2108330/library_600x900.jpg', true),
+  ('elden-ring', 'Elden Ring', 1245620, 22990, 'BRL', 'rpg', 'PC / PS5', 'https://cdn.cloudflare.steamstatic.com/steam/apps/1245620/library_600x900.jpg', true),
+  ('cyberpunk-2077', 'Cyberpunk 2077', 1091500, 9995, 'BRL', 'rpg', 'PC', 'https://cdn.cloudflare.steamstatic.com/steam/apps/1091500/library_600x900.jpg', true),
+  ('marvel-rivals', 'Marvel Rivals', 2767030, 0, 'BRL', 'acao', 'PC', 'https://cdn.cloudflare.steamstatic.com/steam/apps/2767030/library_600x900.jpg', true),
+  ('the-last-of-us-part-ii-remastered', 'The Last of Us Part II', 2531310, 12475, 'BRL', 'aventura', 'PS5', 'https://cdn.cloudflare.steamstatic.com/steam/apps/2531310/library_600x900.jpg', true)
+on conflict (steam_app_id) do update set
+  slug = excluded.slug,
+  name = excluded.name,
+  price_cents = excluded.price_cents,
+  currency = excluded.currency,
+  category = excluded.category,
+  platform = excluded.platform,
+  image_url = excluded.image_url,
+  active = excluded.active,
+  synced_at = now(),
+  updated_at = now();

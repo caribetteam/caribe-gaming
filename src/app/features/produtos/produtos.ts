@@ -1,10 +1,38 @@
-import { Component, OnInit, inject, ChangeDetectorRef, DestroyRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, inject, ChangeDetectorRef, DestroyRef, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subscription } from 'rxjs';
 
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
-import { ProdutosService } from '../../core/services/produtos.service';
+import { ActivatedRoute, Router } from '@angular/router';
+import { ProdutosService, semAcento } from '../../core/services/produtos.service';
+import { slugDoAppid } from '../../core/utils/slug';
+import { LoaderBarco } from './carregamento/cacrregamento-barco';
+
+// Capas que a Steam gera sozinha (arte pequena em cima e degradê embaixo) quase não têm detalhe
+// na parte de baixo. Se a média ficar abaixo deste valor, a capa é trocada pela horizontal.
+const LIMITE_CAPA_LISA = 2.5;
+
+// Se alguma capa boa for trocada sem querer, coloque o appid aqui. Para forçar a troca, use o outro.
+const SEMPRE_CAPA_VERTICAL = new Set<number>([]);
+const SEMPRE_CAPA_HORIZONTAL = new Set<number>([]);
+
+// Média das diferenças entre pixels vizinhos nos 40% de baixo da capa (0 = totalmente liso)
+function detalheInferior(dados: Uint8ClampedArray, w: number, h: number): number {
+  const lum = (x: number, y: number) => {
+    const i = (y * w + x) * 4;
+    return 0.299 * dados[i] + 0.587 * dados[i + 1] + 0.114 * dados[i + 2];
+  };
+  let soma = 0;
+  let qtd = 0;
+  for (let y = Math.floor(h * 0.6); y < h - 1; y++) {
+    for (let x = 0; x < w - 1; x++) {
+      soma += Math.abs(lum(x, y) - lum(x + 1, y)) + Math.abs(lum(x, y) - lum(x, y + 1));
+      qtd += 2;
+    }
+  }
+  return qtd ? soma / qtd : 99;
+}
 import { CarrinhoFacade } from '../../core/facades/carrinho.facade';
 import { FavoritosService } from '../../core/services/favoritos.service';
 import { Produto } from '../../core/models/jogo';
@@ -19,7 +47,7 @@ export interface CategoriaItem {
 @Component({
   selector: 'app-produtos',
   standalone: true,
-  imports: [CommonModule, FormsModule, PlataformaIcones],
+  imports: [CommonModule, FormsModule, PlataformaIcones, LoaderBarco],
   templateUrl: './produtos.html',
   styleUrls: ['./produtos.css'],
 })
@@ -30,6 +58,8 @@ export class Produtos implements OnInit {
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
   private destroyRef = inject(DestroyRef);
+  private route = inject(ActivatedRoute);
+  private platformId = inject(PLATFORM_ID);
 
   produtos: Produto[] = [];
   produtosExibidos: Produto[] = [];
@@ -48,6 +78,15 @@ export class Produtos implements OnInit {
 
   // Filtros recolhíveis (mobile)
   filtrosAbertos: boolean = false;
+
+  // Carregamento e erro da lista
+  carregando: boolean = true;
+  erro: boolean = false;
+  private assinatura?: Subscription;
+  private timerTimeout: any;
+
+  // Texto vindo da pesquisa do menu (/jogos?busca=...)
+  termoBusca: string = '';
 
   readonly faixasPreco = [
     { id: 'todos', nome: 'Todos' },
@@ -79,29 +118,81 @@ export class Produtos implements OnInit {
     { id: 'role-playing-rpg', nome: 'RPG', icone: '🛡️' },
     { id: 'adventure', nome: 'Aventura', icone: '🧭' },
     { id: 'shooter', nome: 'FPS / Tiro', icone: '🎯' },
-    { id: 'simulator', nome: 'Simulação', icone: '🚗' },
+    { id: 'simulation', nome: 'Simulação', icone: '🚗' },
+    { id: 'strategy', nome: 'Estratégia', icone: '♟️' },
+    { id: 'platform', nome: 'Plataforma', icone: '🪂' },
     { id: 'sport', nome: 'Esportes', icone: '⚽' },
     { id: 'racing', nome: 'Corrida', icone: '🏁' },
     { id: 'indie', nome: 'Indie', icone: '🎨' },
   ];
 
   ngOnInit(): void {
+    // Toda vez que a pesquisa do menu muda, o catálogo é filtrado de novo
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      this.termoBusca = (params.get('busca') ?? '').trim();
+      this.aplicarFiltros();
+    });
+
     this.carregarProdutos();
   }
 
   // A lista chega de novo a cada 5 min (preços atualizados na Steam).
   // Os filtros ficam guardados aqui no componente, então são reaplicados a cada chegada.
   carregarProdutos(): void {
-    this.produtosService
+    this.assinatura?.unsubscribe();
+    this.carregando = this.produtos.length === 0; // com a lista já na tela, não esconde nada
+    this.erro = false;
+    this.iniciarTempoLimite();
+
+    this.assinatura = this.produtosService
       .obterProdutos()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (dados) => {
+          this.limparTempoLimite();
+          this.carregando = false;
+
+          // A Steam respondeu vazio e não há lista anterior: trata como erro
+          if (dados.length === 0 && this.produtos.length === 0) {
+            this.erro = true;
+            this.cdr.markForCheck();
+            return;
+          }
+
+          this.erro = false;
           this.produtos = dados;
           this.aplicarFiltros();
         },
-        error: (err) => console.error('Erro ao carregar lista de jogos:', err),
+        error: (err) => {
+          console.error('Erro ao carregar lista de jogos:', err);
+          this.limparTempoLimite();
+          this.carregando = false;
+          // se já havia uma lista, continua mostrando ela; senão mostra a tela de erro
+          if (this.produtos.length === 0) this.erro = true;
+          this.cdr.markForCheck();
+        },
       });
+  }
+
+  tentarNovamente(): void {
+    this.carregarProdutos();
+  }
+
+  // se a Steam demorar demais, mostra o erro em vez de deixar o barquinho navegando para sempre
+  private iniciarTempoLimite(): void {
+    this.limparTempoLimite();
+    if (!isPlatformBrowser(this.platformId)) return;
+    this.timerTimeout = setTimeout(() => {
+      if (this.carregando) {
+        this.carregando = false;
+        this.erro = true;
+        this.cdr.markForCheck();
+      }
+    }, 25000);
+  }
+
+  private limparTempoLimite(): void {
+    clearTimeout(this.timerTimeout);
   }
 
   get quantidadeFavoritos(): number {
@@ -127,6 +218,14 @@ export class Produtos implements OnInit {
     // 1. Aba de Favoritos
     if (this.abaAtiva === 'favoritos') {
       resultado = resultado.filter((p) => p.favorito);
+    }
+
+    // 1.1 Texto da pesquisa do menu (sem diferenciar acento nem maiúscula)
+    if (this.termoBusca) {
+      const t = semAcento(this.termoBusca);
+      resultado = resultado.filter(
+        (p) => semAcento(p.nome).includes(t) || semAcento(p.genero).includes(t),
+      );
     }
 
     // 2. Categoria
@@ -180,6 +279,16 @@ export class Produtos implements OnInit {
       case 'az':
         resultado.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
         break;
+      default:
+        // relevância: com pesquisa, quem começa com o termo vem primeiro
+        if (this.termoBusca) {
+          const t = semAcento(this.termoBusca);
+          const pontos = (p: Produto) => {
+            const n = semAcento(p.nome);
+            return n.startsWith(t) ? 0 : n.includes(' ' + t) ? 1 : n.includes(t) ? 2 : 3;
+          };
+          resultado.sort((a, b) => pontos(a) - pontos(b));
+        }
     }
 
     this.produtosExibidos = resultado;
@@ -208,6 +317,16 @@ export class Produtos implements OnInit {
     this.apenasPromocao = false;
     this.categoriaAtiva = null;
     this.aplicarFiltros();
+  }
+
+  // tira o texto da pesquisa (e o ?busca= do endereço)
+  limparBusca(): void {
+    this.router.navigate(['/jogos'], { queryParams: { busca: null }, queryParamsHandling: 'merge' });
+  }
+
+  limparTudo(): void {
+    this.limparFiltros();
+    if (this.termoBusca) this.limparBusca();
   }
 
   toggleFiltros(): void {
@@ -239,17 +358,87 @@ export class Produtos implements OnInit {
     return produto.id;
   }
 
-  // Se a capa vertical não existir na Steam, usa a imagem horizontal do mesmo jogo
+  // Roda quando a capa carregou. Se for uma capa automática da Steam, troca pela horizontal inteira.
+  imagemCarregou(event: Event, produto: Produto): void {
+    const img = event.target as HTMLImageElement;
+    if (!isPlatformBrowser(this.platformId) || img.dataset['verificada']) return;
+    img.dataset['verificada'] = '1';
+
+    const appid = Number(produto.id);
+    if (SEMPRE_CAPA_VERTICAL.has(appid)) return;
+
+    if (SEMPRE_CAPA_HORIZONTAL.has(appid)) {
+      this.trocarPorHorizontal(img, produto);
+      return;
+    }
+
+    // outra cópia da imagem, em modo que permite ler os pixels
+    const sonda = new Image();
+    sonda.crossOrigin = 'anonymous';
+    sonda.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 40;
+        canvas.height = 60;
+        const c = canvas.getContext('2d', { willReadFrequently: true });
+        if (!c) return;
+        c.drawImage(sonda, 0, 0, 40, 60);
+        const dados = c.getImageData(0, 0, 40, 60).data;
+        if (detalheInferior(dados, 40, 60) < LIMITE_CAPA_LISA) this.trocarPorHorizontal(img, produto);
+      } catch {
+        /* sem permissão para ler os pixels: mantém a capa como está */
+      }
+    };
+    sonda.onerror = () => {}; // o servidor não deixou ler: mantém a capa como está
+    sonda.src = img.currentSrc || img.src;
+  }
+
+  private trocarPorHorizontal(img: HTMLImageElement, produto: Produto): void {
+    const caixa = img.parentElement as HTMLElement | null;
+    const url = `https://cdn.cloudflare.steamstatic.com/steam/apps/${produto.id}/header.jpg`;
+    img.dataset['reserva'] = '1'; // se esta também falhar, mostra o cartão com o nome
+    caixa?.style.setProperty('--capa', `url("${url}")`);
+    caixa?.classList.add('capa-reserva');
+    img.classList.add('capa-horizontal');
+    img.src = url;
+  }
+
+  // Só roda quando a capa principal do card falhou (cdn.cloudflare ou a manual).
+  // 1ª falha: busca a capa certa na API da Steam (vertical) ou a imagem horizontal, que aparece
+  //           inteira sobre um fundo desfocado dela mesma.
+  // 2ª falha (ou nada encontrado): mostra um cartão com o nome do jogo.
   imagemFalhou(event: Event, produto: Produto): void {
     const img = event.target as HTMLImageElement;
-    if (!img.src.endsWith('/header.jpg')) {
-      img.src = `https://cdn.cloudflare.steamstatic.com/steam/apps/${produto.id}/header.jpg`;
+    const caixa = img.parentElement as HTMLElement | null;
+
+    if (img.dataset['reserva']) {
+      this.mostrarSemImagem(img, caixa, produto);
+      return;
     }
+    img.dataset['reserva'] = '1';
+
+    this.produtosService.obterCapaAlternativa(produto.id).subscribe((url) => {
+      if (!url) {
+        this.mostrarSemImagem(img, caixa, produto);
+        return;
+      }
+      caixa?.style.setProperty('--capa', `url("${url}")`);
+      caixa?.classList.add('capa-reserva');
+      img.classList.add('capa-horizontal');
+      img.src = url;
+    });
+  }
+
+  private mostrarSemImagem(img: HTMLImageElement, caixa: HTMLElement | null, produto: Produto): void {
+    img.style.visibility = 'hidden';
+    caixa?.classList.remove('capa-reserva');
+    caixa?.classList.add('sem-imagem');
+    caixa?.setAttribute('data-nome', produto.nome);
   }
 
   // --- NAVEGAÇÃO E AÇÕES DE E-COMMERCE ---
   irParaPaginaDoJogo(produto: Produto): void {
-    this.router.navigate(['/produto', produto.id]);
+    this.router.navigate(['/produto', slugDoAppid(produto.id)]);
   }
 
   adicionarAoCarrinho(produto: Produto): void {
@@ -343,4 +532,3 @@ export class Produtos implements OnInit {
     }, 3000);
   }
 }
-
