@@ -1,27 +1,8 @@
 import { RenderMode, ServerRoute } from '@angular/ssr';
 
 export const serverRoutes: ServerRoute[] = [
-  // ... outras rotas que já existem aí no seu projeto
-
-  {
-    path: 'jogos/:id',
-    renderMode: RenderMode.Server,
-  },
-  {
-    path: 'produto/:slug',
-    renderMode: RenderMode.Server,
-  },
-  {
-    path: 'sobre-nos',
-    renderMode: RenderMode.Prerender, // Ou RenderMode.Server
-  },
-  {
-    path: 'jogos/:id',
-    renderMode: RenderMode.Server,
-  },
-
-  {
-    path: '**',
-    renderMode: RenderMode.Prerender,
-  },
+  { path: 'jogos', renderMode: RenderMode.Client },
+  { path: 'produto/:slug', renderMode: RenderMode.Client },
+  { path: '404', renderMode: RenderMode.Client },
+  { path: '**', renderMode: RenderMode.Prerender },
 ];

@@ -1,68 +1,501 @@
-<main class="pagina-detalhes">
-  <nav class="cabecalho-navegacao">
-    <a class="btn-voltar" routerLink="/jogos">← Voltar aos jogos</a>
-  </nav>
+<div class="toast-notificacao" *ngIf="mensagemToast">
+  {{ mensagemToast }}
+</div>
 
-  <p *ngIf="carregando()">Carregando produto...</p>
+<div class="pagina-detalhes-container">
+  <div class="pagina-detalhes" *ngIf="!carregando && !erro && jogo">
+    <!-- CABEÇALHO / BREADCRUMB COM TIMÃO PIRATA -->
+    <div class="cabecalho-navegacao">
+      <button class="btn-voltar" (click)="voltarPagina()">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="icon-pirata"
+        >
+          <circle cx="12" cy="12" r="9"></circle>
+          <circle cx="12" cy="12" r="3"></circle>
+          <line x1="12" y1="1" x2="12" y2="23"></line>
+          <line x1="1" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="4.22" x2="19.78" y2="19.78"></line>
+          <line x1="4.22" y1="19.78" x2="19.78" y2="4.22"></line>
+        </svg>
+        Voltar
+      </button>
 
-  <section class="estado-alternativo" *ngIf="!carregando() && naoEncontrado()">
-    <h1>Produto não encontrado</h1>
-    <a class="btn-comprar" routerLink="/jogos">Voltar ao catálogo</a>
-  </section>
+      <div class="breadcrumb">
+        <span class="breadcrumb-link" (click)="irParaHome()">HOME</span> &gt;
+        <span class="breadcrumb-link" (click)="irParaJogos()">JOGOS</span> &gt;
+        <strong>{{ jogo.nome }}</strong>
+      </div>
+    </div>
 
-  <ng-container *ngIf="produto() as jogo">
+    <!-- GRID PRINCIPAL -->
     <div class="grid-principal">
-      <section class="secao-midia">
+      <div class="secao-midia">
         <div class="container-imagem-destaque">
-          <img class="img-destaque" [src]="jogo.imagem" [alt]="jogo.nome" />
+          <span class="badge-desconto" *ngIf="desconto > 0 && emEstoque">-{{ desconto }}%</span>
+          <span class="badge-esgotado" *ngIf="!emEstoque">ESGOTADO</span>
+
+          <span
+            class="badge-classificacao"
+            [ngClass]="obterClasseClassificacao(jogo.classificacaoEtaria)"
+            title="Classificação indicativa"
+          >
+            {{ formatarClassificacao(jogo.classificacaoEtaria) }}
+          </span>
+
+          <button
+            class="btn-seta btn-prev"
+            (click)="fotoAnterior()"
+            *ngIf="galeriaImagens.length > 1"
+          >
+            ❮
+          </button>
+
+          <!-- fundo desfocado atrás da capa vertical -->
+          <div
+            class="fundo-capa"
+            *ngIf="capaAtiva"
+            [style.background-image]="'url(' + capaGaleria + ')'"
+          ></div>
+
+          <!-- IMAGEM COM FALLBACK AUTOMÁTICO -->
+          <img
+            *ngIf="galeriaImagens.length > 0"
+            [src]="galeriaImagens[indiceAtivo]"
+            [alt]="jogo.nome"
+            class="img-destaque"
+            [class.img-capa]="capaAtiva"
+            [class.esgotado-img]="!emEstoque"
+            (error)="tratarErroImagem($event)"
+          />
+          <img
+            *ngIf="galeriaImagens.length === 0"
+            [src]="jogo.background_image"
+            [alt]="jogo.nome"
+            class="img-destaque"
+            [class.esgotado-img]="!emEstoque"
+            (error)="tratarErroImagem($event)"
+          />
+
+          <button
+            class="btn-seta btn-next"
+            (click)="proximaFoto()"
+            *ngIf="galeriaImagens.length > 1"
+          >
+            ❯
+          </button>
         </div>
-      </section>
 
-      <section class="secao-info">
-        <span class="categoria-tag">{{ jogo.genero || 'Jogo' }}</span>
+        <div class="fila-miniaturas" *ngIf="galeriaImagens.length > 1">
+          <button
+            *ngFor="let img of galeriaImagens; let i = index"
+            class="thumb-item"
+            [class.ativo]="i === indiceAtivo"
+            (click)="selecionarIndice(i)"
+          >
+            <img [src]="img" alt="Gameplay" (error)="tratarErroImagem($event)" />
+          </button>
+        </div>
+      </div>
+
+      <div class="secao-info">
         <h1 class="titulo-jogo">{{ jogo.nome }}</h1>
-        <p class="subtitulos">{{ jogo.plataforma }}</p>
 
-        <div class="card-compra">
-          <div class="precos-linha">
-            <span class="preco-promo">{{ jogo.precoPromocional }}</span>
+        <div class="subtitulos">
+          <span>{{ resumoLista(jogo.desenvolvedoras) }}</span>
+          <span>{{ jogo.plataformas }}</span>
+          <span class="categoria-tag">{{ genero }}</span>
+        </div>
+
+        <div class="avaliacao-container" *ngIf="totalSteam > 0">
+          <div class="estrelas">{{ getEstrelasTexto(notaSteamNum) }}</div>
+          <span class="nota-numero">{{ notaSteam }}</span>
+          <span class="total-avaliacoes"
+            >({{ formatarMilhar(totalSteam) }} avaliações na Steam)</span
+          >
+        </div>
+
+        <!-- CARD DE COMPRA / ESGOTADO -->
+        <div class="card-compra" [class.card-esgotado]="!emEstoque">
+          <div class="precos-linha" *ngIf="emEstoque">
+            <span class="preco-original" *ngIf="desconto > 0">{{ precoOriginalFormatado }}</span>
+            <span class="preco-promo">{{ precoFormatado }}</span>
           </div>
-          <div class="acoes-botoes">
-            <button class="btn-adicionar" type="button" (click)="adicionarAoCarrinho()">
-              Adicionar ao carrinho
+
+          <div class="status-estoque-box" *ngIf="!emEstoque">
+            <span class="icone-esgotado">🙁</span>
+            <div class="texto-esgotado">
+              <strong>Produto Esgotado</strong>
+              <p>Não há chaves digitais disponíveis para esta região no momento.</p>
+            </div>
+          </div>
+
+          <div class="acoes-botoes" *ngIf="emEstoque">
+            <button class="btn-adicionar" (click)="adicionarAoCarrinho()">
+              🛒 Adicionar ao carrinho
             </button>
             <button
               class="btn-favorito"
-              type="button"
-              [class.favoritado]="ehFavorito()"
-              (click)="toggleFavorito()">
-              {{ ehFavorito() ? '♥' : '♡' }}
-            </button>
-            <button class="btn-comprar" type="button" (click)="comprarAgora()">
-              Comprar agora
+              [class.favoritado]="favorito"
+              (click)="toggleFavorito()"
+              [title]="favorito ? 'Remover dos favoritos' : 'Adicionar aos favoritos'"
+              [attr.aria-pressed]="favorito"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                class="icon-heart"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+                ></path>
+              </svg>
             </button>
           </div>
+
+          <button class="btn-comprar" (click)="comprarAgora()" *ngIf="emEstoque">
+            Comprar Key Agora
+          </button>
+          <button class="btn-indisponivel" disabled *ngIf="!emEstoque">Indisponível</button>
+
+          <div class="compra-segura" *ngIf="emEstoque">🔒 Envio imediato via e-mail (CD-KEY)</div>
         </div>
 
+        <!-- TABELA DE FATOS -->
         <div class="tabela-fatos">
           <div class="fato-linha">
-            <span>Plataforma</span><strong>{{ jogo.plataforma }}</strong>
+            <span>Plataforma:</span> <strong>{{ jogo.plataformas }}</strong>
           </div>
-          <div class="fato-linha" *ngIf="jogo.steamAppId">
-            <span>Steam App ID</span><strong>{{ jogo.steamAppId }}</strong>
+          <div class="fato-linha">
+            <span>Gênero:</span> <strong>{{ genero }}</strong>
           </div>
-          <div class="fato-linha"><span>Categoria</span><strong>{{ jogo.genero || 'Jogo' }}</strong></div>
+          <div class="fato-linha">
+            <span>Lançamento:</span> <strong>{{ jogo.dataLancamento }}</strong>
+          </div>
+          <div class="fato-linha">
+            <span>Desenvolvedor:</span> <strong>{{ jogo.desenvolvedoras }}</strong>
+          </div>
+          <div class="fato-linha">
+            <span>Distribuidora:</span> <strong>{{ jogo.distribuidoras }}</strong>
+          </div>
         </div>
-      </section>
+      </div>
     </div>
 
-    <section class="secao-detalhada">
-      <h2>Sobre este jogo</h2>
-      <p class="descricao-paragrafo">
-        {{ jogo.descricaoCustom || 'Prepare-se para uma nova aventura no Caribe Gaming.' }}
-      </p>
-    </section>
-  </ng-container>
+    <!-- SEÇÃO CHAVE DIGITAL -->
+    <div class="secao-detalhada secao-info-key">
+      <div class="grid-info-key">
+        <div class="card-info-key">
+          <div class="icone-key-box verde">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+            >
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </div>
+          <div class="texto-key-box">
+            <strong>America latina</strong>
+            <span>Pode ser ativado em: <b>Brasil</b></span>
+          </div>
+        </div>
 
-  <p class="toast-notificacao" *ngIf="mensagem()">{{ mensagem() }}</p>
-</main>
+        <div class="card-info-key">
+          <div class="icone-key-box azul">
+            <i class="fab fa-steam"></i>
+          </div>
+          <div class="texto-key-box">
+            <strong>Steam</strong>
+            <span>Plataforma de ativação/resgate: <b>Steam</b></span>
+          </div>
+        </div>
+
+        <div class="card-info-key">
+          <div class="icone-key-box roxo">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"
+              />
+            </svg>
+          </div>
+          <div class="texto-key-box">
+            <strong>Chave digital</strong>
+            <small class="texto-sucesso">Entrega instantânea</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SOBRE O JOGO -->
+    <div class="secao-detalhada">
+      <h2>SOBRE O JOGO</h2>
+      <p class="descricao-paragrafo">{{ jogo.descricao }}</p>
+    </div>
+
+    <!-- CARACTERÍSTICAS -->
+    <div class="secao-detalhada" *ngIf="jogo.caracteristicas?.length">
+      <h2>CARACTERÍSTICAS</h2>
+      <div class="lista-caracteristicas">
+        <span class="item-caracteristica" *ngFor="let item of jogo.caracteristicas">{{
+          item
+        }}</span>
+      </div>
+    </div>
+
+    <!-- EXPANSÕES E DLCs
+    <div class="secao-detalhada" *ngIf="dlcs.length > 0">
+      <h2>EXPANSÕES E CONTEÚDO EXTRA</h2>
+      <div class="grid-dlcs">
+        <div class="card-dlc" *ngFor="let d of dlcs">
+          <img [src]="d.imagem" [alt]="d.nome" loading="lazy" />
+          <div class="info-dlc">
+            <h4 [title]="d.nome">{{ d.nome }}</h4>
+            <div class="linha-preco-dlc">
+              <span class="badge-desconto-mini" *ngIf="(d.preco?.desconto ?? 0) > 0"
+                >-{{ d.preco?.desconto }}%</span
+              >
+              <s class="preco-dlc-original" *ngIf="d.preco?.original">{{ d.preco?.original }}</s>
+              <span class="preco-dlc">{{ d.preco?.atual }}</span>
+            </div>
+            <button class="btn-dlc" (click)="adicionarDlcAoCarrinho(d)">🛒 Adicionar</button>
+          </div>
+        </div>
+      </div>
+    </div> -->
+
+    <!-- REQUISITOS DE SISTEMA -->
+    <div class="secao-detalhada secao-requisitos">
+      <h2>REQUISITOS DE SISTEMA (PC)</h2>
+      <div class="grid-requisitos">
+        <div class="req-coluna">
+          <h3 class="subtitulo-req">Mínimos:</h3>
+          <div class="texto-req" *ngIf="requisitosMinimos" [innerHTML]="requisitosMinimos"></div>
+          <p class="texto-req" *ngIf="!requisitosMinimos">Não informado.</p>
+        </div>
+        <div class="req-coluna">
+          <h3 class="subtitulo-req">Recomendados:</h3>
+          <div
+            class="texto-req"
+            *ngIf="requisitosRecomendados"
+            [innerHTML]="requisitosRecomendados"
+          ></div>
+          <p class="texto-req" *ngIf="!requisitosRecomendados">Não informado.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- AVALIAÇÕES DOS JOGADORES -->
+    <div class="secao-avaliacoes">
+      <h2>AVALIAÇÕES DOS JOGADORES</h2>
+      <div class="grid-avaliacoes">
+        <div class="resumo-avaliacoes-card">
+          <div class="nota-gigante">{{ mediaSite }}</div>
+          <div class="estrelas">{{ getEstrelasTexto(mediaSiteNum) }}</div>
+          <span class="total-votos"
+            >{{ totalSite }} {{ totalSite === 1 ? 'avaliação' : 'avaliações' }}</span
+          >
+
+          <div class="barras-avaliacao">
+            <div class="linha-barra" *ngFor="let b of distribuicao; trackBy: rastrearBarra">
+              <span>{{ b.estrelas }} {{ b.estrelas === 1 ? 'estrela' : 'estrelas' }}</span>
+              <div class="barra-fundo">
+                <div class="barra-progresso" [style.width.%]="b.pct"></div>
+              </div>
+              <span class="qtd">{{ b.qtd }}</span>
+            </div>
+          </div>
+
+          <button class="btn-escrever-avaliacao" (click)="abrirModal()">Escrever avaliação</button>
+        </div>
+
+        <div class="lista-comentarios">
+          <div class="comentario-card" *ngFor="let c of listaComentarios">
+            <div class="autor-cabecalho">
+              <div class="avatar-autor" [style.background-color]="c.corAvatar || '#00d2d3'">
+                {{ c.avatar }}
+              </div>
+              <div class="info-autor">
+                <strong>{{ c.autor }}</strong>
+                <div class="estrelas-mini">{{ getEstrelasTexto(c.estrelas) }}</div>
+              </div>
+              <span class="data-comentario">{{ c.data }}</span>
+            </div>
+            <p class="texto-comentario">{{ c.texto }}</p>
+            <div class="reacoes-comentario">
+              <span>Isso foi útil?</span>
+              <button
+                type="button"
+                class="btn-reacao"
+                [class.ativo]="votos[c.id] === 'like'"
+                [attr.aria-pressed]="votos[c.id] === 'like'"
+                (click)="votar(c, 'like')"
+              >
+                👍 {{ c.likes }}
+              </button>
+              <button
+                type="button"
+                class="btn-reacao"
+                [class.ativo-negativo]="votos[c.id] === 'dislike'"
+                [attr.aria-pressed]="votos[c.id] === 'dislike'"
+                (click)="votar(c, 'dislike')"
+              >
+                👎 {{ c.dislikes }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- JOGOS PARECIDOS -->
+    <div class="secao-detalhada" *ngIf="recomendados.length > 0">
+      <h2>JOGOS PARECIDOS</h2>
+      <div class="grid-recomendados">
+        <div
+          class="card-rec"
+          *ngFor="let r of recomendados; trackBy: rastrearRec"
+          (click)="abrirJogo(r.id)"
+        >
+          <div class="rec-capa">
+            <img [src]="r.capa" [alt]="r.nome" loading="lazy" />
+            <span class="rec-desconto" *ngIf="(r.preco?.desconto ?? 0) > 0"
+              >-{{ r.preco?.desconto }}%</span
+            >
+          </div>
+          <h4 [title]="r.nome">{{ r.nome }}</h4>
+          <div class="rec-preco">
+            <s *ngIf="r.preco?.original">{{ r.preco?.original }}</s>
+            <strong>{{ r.gratis ? 'Grátis' : (r.preco?.atual ?? 'Indisponível') }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================================
+  detalhe-jogo.html — 2 trechos para TROCAR
+  ====================================================================== -->
+
+    <!-- (1) Dentro de <div class="reacoes-comentario">, TROQUE os dois botões por estes: -->
+
+    <!-- (2) TROQUE o bloco inteiro "MODAL DE ESCREVER AVALIACAO" (do comentario ate o div que fecha
+       o modal-overlay) por este: -->
+    <!-- MODAL DE ESCREVER AVALIAÇÃO -->
+    <div
+      class="modal-overlay"
+      *ngIf="exibirModalAvaliacao"
+      (click)="cliqueNoFundo($event)"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="titulo-modal-avaliacao"
+    >
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 id="titulo-modal-avaliacao">⭐ Escrever avaliação</h3>
+          <button
+            type="button"
+            class="btn-fechar-modal"
+            (click)="fecharModal()"
+            aria-label="Fechar"
+          >
+            ✕
+          </button>
+        </div>
+
+        <form class="modal-body" (ngSubmit)="enviarAvaliacao()" novalidate>
+          <p class="modal-jogo" *ngIf="jogo">
+            Sobre <strong>{{ jogo.nome }}</strong>
+          </p>
+
+          <div class="campo-grupo">
+            <label for="av-nome">Seu GamerTag</label>
+            <input
+              id="av-nome"
+              name="nome"
+              type="text"
+              maxlength="24"
+              autocomplete="off"
+              [(ngModel)]="novoNome"
+              [class.invalido]="tentouEnviar && nomeInvalido"
+              placeholder="Ex: Geralt_BR"
+            />
+            <span class="campo-erro" *ngIf="tentouEnviar && nomeInvalido"
+              >Digite pelo menos 2 letras.</span
+            >
+          </div>
+
+          <div class="campo-grupo">
+            <label>Sua nota</label>
+            <div class="estrelas-input" role="radiogroup" aria-label="Sua nota">
+              <button
+                type="button"
+                *ngFor="let n of notasModal"
+                class="estrela-btn"
+                [class.ativa]="n <= novaNota"
+                [attr.aria-label]="n + (n === 1 ? ' estrela' : ' estrelas')"
+                [attr.aria-checked]="n === novaNota"
+                role="radio"
+                (click)="novaNota = n"
+              >
+                ★
+              </button>
+              <span class="nota-texto">{{ novaNota }} de 5</span>
+            </div>
+          </div>
+
+          <div class="campo-grupo">
+            <label for="av-texto">Sua opinião</label>
+            <textarea
+              id="av-texto"
+              name="texto"
+              rows="4"
+              maxlength="400"
+              [(ngModel)]="novoTexto"
+              [class.invalido]="tentouEnviar && textoInvalido"
+              placeholder="Escreva o que achou do jogo..."
+            ></textarea>
+            <div class="campo-rodape">
+              <span class="campo-erro" *ngIf="tentouEnviar && textoInvalido"
+                >Conte um pouco mais (mínimo 10 letras).</span
+              >
+              <span class="contador">{{ novoTexto.length }}/400</span>
+            </div>
+          </div>
+
+          <div class="modal-acoes">
+            <button type="button" class="btn-cancelar" (click)="fecharModal()">Cancelar</button>
+            <button type="submit" class="btn-enviar">Publicar avaliação</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ERRO AO CARREGAR -->
+  <div class="estado-erro" *ngIf="erro">
+    <p>Não foi possível carregar este jogo.</p>
+    <button class="btn-voltar" (click)="irParaJogos()">Voltar para os jogos</button>
+  </div>
+
+  <app-loader-barco *ngIf="carregando" texto="Navegando nos mares do Caribe"></app-loader-barco>
+</div>

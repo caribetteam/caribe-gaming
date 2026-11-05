@@ -8,5 +8,10 @@ export default defineConfig({
     environment: 'jsdom',
     include: ['src/**/*.spec.ts'],
     setupFiles: 'src/test.ts',
+    server: {
+      deps: {
+        inline: ['rxfire', '@angular/fire'],
+      },
+    },
   },
 });

@@ -3,9 +3,10 @@
 
   @if (compraFinalizada()) {
     <div class="checkout-sucesso">
-      <div class="sucesso-icon">⚓ ✓</div>
+      <div class="sucesso-icon">⚓ </div>
       <h3>Tesouros adquiridos com sucesso!</h3>
       <p>Seu pedido foi processado com sucesso e os jogos foram liberados para sua tripulação.</p>
+      <p>Sua chave foi encaminhada diretamente para seu email cadastrado, não esqueça de conferir a caixa de span.</p>
       <button class="btn-acao btn-primary btn-voltar-jogos" routerLink="/jogos">
         Continuar Navegando
       </button>
@@ -50,17 +51,15 @@
         </div>
 
         <div class="field-group">
-          <label class="field-label">CPF ou CNPJ</label>
+          <label class="field-label">Endereço de Cobrança</label>
           <input
             type="text"
-            formControlName="cpfCnpj"
-            inputmode="numeric"
-            autocomplete="off"
-            placeholder="Somente números"
-            [class.input-erro]="campoInvalido('cpfCnpj')"
+            formControlName="endereco"
+            placeholder="Rua, Número, Bairro, Cidade - UF"
+            [class.input-erro]="campoInvalido('endereco')"
           />
-          @if (campoInvalido('cpfCnpj')) {
-            <small>Informe um CPF ou CNPJ válido para a cobrança Sandbox.</small>
+          @if (campoInvalido('endereco')) {
+            <small>Por favor, informe seu endereço para emissão do recibo.</small>
           }
         </div>
 
@@ -110,13 +109,13 @@
           type="button"
           class="btn-acao btn-primary btn-finalizar"
           (click)="finalizar()"
-          [disabled]="formulario.invalid || processando()"
+          [disabled]="formulario.invalid || processandoPagamento()"
         >
           <i class="fa-solid fa-lock"></i>
-          {{ processando() ? 'Processando...' : 'Finalizar Compra Segura' }}
+          {{ processandoPagamento() ? 'Abrindo pagamento...' : 'Pagar com Mercado Pago' }}
         </button>
-        @if (mensagemErro()) {
-          <div class="mensagem-erro" role="alert">{{ mensagemErro() }}</div>
+        @if (erroPagamento()) {
+          <p class="erro-pagamento" role="alert">{{ erroPagamento() }}</p>
         }
       </form>
 

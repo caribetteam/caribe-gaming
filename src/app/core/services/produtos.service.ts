@@ -1,163 +1,91 @@
-import { HttpClient } from '@angular/common/http';
+// src/app/core/services/produtos.service.ts
 import { Injectable, inject } from '@angular/core';
-import { Observable, catchError, map, of } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { Observable, map } from 'rxjs';
+import { CATALOGO, JogoCard, Produto } from '../models/jogo';
+import { JogosApiService } from './jogos-api.service';
+import { slugDoAppid } from '../utils/slug';
 
-export interface Produto {
-  id: string;
-  nome: string;
-  steamAppId?: string;
-  genero: string;
-  plataforma: string;
-  precoOriginal: string;
-  precoPromocional: string;
-  desconto: number;
-  categorias: string[];
-  slug: string;
-  imagem?: string;
-  imagemPosicao?: string;
-  descricaoCustom?: string;
+// "acao" encontra "Ação", "sobrevivencia" encontra "Sobrevivência"...
+export const semAcento = (t: string) =>
+  (t ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+export interface ResultadoBusca {
+  itens: Produto[]; // os primeiros resultados (para o menu da pesquisa)
+  total: number; // quantos jogos combinam no total
 }
-
-interface ProdutoApi {
-  id: string;
-  slug: string;
-  name: string;
-  steam_app_id: number | null;
-  price_cents: number;
-  currency: string;
-  category: string | null;
-  platform: string;
-  image_url: string | null;
-  active: boolean;
-}
-
-interface ProdutosResponse {
-  products: ProdutoApi[];
-}
-
-interface ProdutoResponse {
-  product: ProdutoApi;
-}
-
-type ItemCatalogo = {
-  id: string;
-  nome: string;
-  steamAppId?: string;
-  imagemCustom?: string;
-  imagemPosicao?: string;
-  genero: string;
-  plat: string;
-  orig: string;
-  promo: string;
-  desc: number;
-  categorias: string[];
-  slug: string;
-  descricaoCustom?: string;
-};
 
 @Injectable({ providedIn: 'root' })
 export class ProdutosService {
-  private readonly http = inject(HttpClient);
+  private jogosApi = inject(JogosApiService);
 
-  readonly listaProdutos: ItemCatalogo[] = [
-    { id: '1', nome: 'Grand Theft Auto V', steamAppId: '271590', genero: 'Ação / Mundo Aberto', plat: 'PC', orig: 'R$ 149,90', promo: 'R$ 74,95', desc: 50, categorias: ['mundo-aberto'], slug: 'grand-theft-auto-v' },
-    { id: '2', nome: 'The Witcher 3: Wild Hunt', steamAppId: '292030', genero: 'RPG / Mundo Aberto', plat: 'PC / PS5', orig: 'R$ 129,99', promo: 'R$ 129,99', desc: 0, categorias: ['rpg'], slug: 'the-witcher-3-wild-hunt' },
-    { id: '3', nome: 'The Sims 4', steamAppId: '1222670', genero: 'Simulação', plat: 'PC', orig: 'Grátis', promo: 'Grátis', desc: 0, categorias: ['simulacao'], slug: 'the-sims-4' },
-    { id: '4', nome: 'God of War', steamAppId: '1593500', genero: 'Ação / Aventura', plat: 'PC / PS5', orig: 'R$ 199,90', promo: 'R$ 199,90', desc: 0, categorias: ['acao'], slug: 'god-of-war-4' },
-    { id: '5', nome: 'Marvel\'s Spider-Man Remastered', steamAppId: '1817070', genero: 'Ação / Aventura', plat: 'PC / PS5', orig: 'R$ 349,90', promo: 'R$ 199,90', desc: 42, categorias: ['mundo-aberto'], slug: 'marvels-spider-man-remastered' },
-    { id: '6', nome: 'Call of Duty: Modern Warfare II', steamAppId: '1938090', genero: 'Tiro / FPS', plat: 'PC', orig: 'R$ 299,00', promo: 'R$ 299,00', desc: 0, categorias: ['acao'], slug: 'call-of-duty-modern-warfare-ii-2022' },
-    { id: '7', nome: 'A Plague Tale: Innocence', steamAppId: '752590', genero: 'Aventura / Mistério', plat: 'PC', orig: 'R$ 229,00', promo: 'R$ 91,60', desc: 60, categorias: ['aventura'], slug: 'a-plague-tale-innocence' },
-    { id: '8', nome: 'God of War Ragnarök', steamAppId: '2322010', genero: 'Ação / Aventura', plat: 'PC / PS5', orig: 'R$ 249,90', promo: 'R$ 249,90', desc: 0, categorias: ['acao'], slug: 'god-of-war-ragnarok' },
-    { id: '9', nome: 'Hollow Knight', steamAppId: '367520', genero: 'Metroidvania', plat: 'PC', orig: 'R$ 46,99', promo: 'R$ 46,99', desc: 0, categorias: ['acao'], slug: 'hollow-knight' },
-    { id: '10', nome: 'Red Dead Redemption 2', steamAppId: '1174180', genero: 'Ação / Mundo Aberto', plat: 'PC / PS5', orig: 'R$ 299,90', promo: 'R$ 98,96', desc: 67, categorias: ['mundo-aberto'], slug: 'red-dead-redemption-2' },
-    { id: '11', nome: 'Assassin’s Creed IV Black Flag', steamAppId: '242050', genero: 'Ação', plat: 'PC', orig: 'R$ 119,99', promo: 'R$ 119,99', desc: 0, categorias: ['mundo-aberto'], slug: 'assassins-creed-iv-black-flag' },
-    { id: '12', nome: 'Yakuza 0', steamAppId: '638970', genero: 'Ação / Luta', plat: 'PC', orig: 'R$ 83,50', promo: 'R$ 83,50', desc: 0, categorias: ['mundo-aberto'], slug: 'yakuza-0' },
-    { id: '13', nome: 'EA Sports FC 24', steamAppId: '2195250', genero: 'Esportes', plat: 'PC / PS5', orig: 'R$ 350,00', promo: 'R$ 350,00', desc: 0, categorias: ['simulacao'], slug: 'ea-sports-fc-24' },
-    { id: '14', nome: 'Life is Strange', steamAppId: '319630', genero: 'História Interativa', plat: 'PC', orig: 'R$ 99,00', promo: 'R$ 19,80', desc: 80, categorias: ['aventura'], slug: 'life-is-strange' },
-    { id: '15', nome: 'The Last of Us Part I', steamAppId: '1888930', genero: 'Ação / Sobrevivência', plat: 'PC / PS5', orig: 'R$ 249,90', promo: 'R$ 249,90', desc: 0, categorias: ['aventura'], slug: 'the-last-of-us-part-i' },
-    { id: '16', nome: 'F1 23', steamAppId: '2108330', genero: 'Corrida', plat: 'PC', orig: 'R$ 350,00', promo: 'R$ 143,60', desc: 60, categorias: ['simulacao'], slug: 'f1-23' },
-    { id: '17', nome: 'Elden Ring', steamAppId: '1245620', genero: 'RPG / Souls-like', plat: 'PC / PS5', orig: 'R$ 229,90', promo: 'R$ 229,90', desc: 0, categorias: ['rpg'], slug: 'elden-ring' },
-    { id: '18', nome: 'Cyberpunk 2077', steamAppId: '1091500', genero: 'RPG / Sci-Fi', plat: 'PC', orig: 'R$ 199,90', promo: 'R$ 99,95', desc: 50, categorias: ['rpg'], slug: 'cyberpunk-2077' },
-    { id: '19', nome: 'Marvel Rivals', steamAppId: '2767030', genero: 'Hero Shooter', plat: 'PC', orig: 'Grátis', promo: 'Grátis', desc: 0, categorias: ['acao'], slug: 'marvel-rivals' },
-    { id: '20', nome: 'The Last of Us Part II', steamAppId: '2531310', genero: 'Ação / Sobrevivência', plat: 'PS5', orig: 'R$ 249,90', promo: 'R$ 124,75', desc: 50, categorias: ['aventura'], slug: 'the-last-of-us-part-ii-remastered' },
-    // ===== JOGOS NOVOS — só pra encher o catálogo (usam o componente único) =====
-    
-    
-  ];
-
-  obterProdutos(): Observable<Produto[]> {
-    return this.http.get<ProdutosResponse>(`${environment.backendUrl}/api/products`).pipe(
-      map((response) => response.products.map((produto) => this.mapearProdutoApi(produto))),
-      catchError((error) => {
-        console.error('Erro ao carregar produtos pela API; usando fixture local.', error);
-        return of(this.mapearFixture());
-      }),
-    );
+  obterProdutos(opts: { q?: string; plataforma?: 'pc' | 'ps'; pagina?: number } = {}): Observable<Produto[]> {
+    return this.jogosApi
+      .listar(opts)
+      .pipe(map((lista) => lista.map((j) => this.mapearJogoParaProduto(j))));
   }
 
-  obterPorSlug(slug: string): Observable<Produto | undefined> {
-    return this.http
-      .get<ProdutoResponse>(
-        `${environment.backendUrl}/api/products/${encodeURIComponent(slug)}`,
-      )
-      .pipe(
-        map((response) => this.mapearProdutoApi(response.product)),
-        catchError((error) => {
-          console.error('Erro ao carregar produto pela API; usando fixture local.', error);
-          return of(this.mapearFixture().find((produto) => produto.slug === slug));
-        }),
-      );
-  }
+  // Busca instantânea direto no catálogo (sem chamar a Steam). Usada na pesquisa do menu.
+  // Ordem: começa com o termo > palavra começa com o termo > contém no nome > só no gênero
+  buscarCatalogo(termo: string, limite = 6): ResultadoBusca {
+    const t = semAcento(termo.trim());
+    if (!t) return { itens: [], total: 0 };
 
-  private mapearFixture(): Produto[] {
-    return this.listaProdutos.map((item) => ({
-      id: item.id,
-      nome: item.nome,
-      imagem: item.imagemCustom
-        ? item.imagemCustom
-        : `https://cdn.cloudflare.steamstatic.com/steam/apps/${item.steamAppId}/library_600x900.jpg`,
-      imagemPosicao: item.imagemPosicao ?? 'center',
-      precoOriginal: item.orig,
-      precoPromocional: item.promo,
-      desconto: item.desc,
-      genero: item.genero,
-      plataforma: item.plat,
-      categorias: item.categorias,
-      slug: item.slug,
-      steamAppId: item.steamAppId,
-    }));
-  }
+    const achados: { g: (typeof CATALOGO)[number]; pontos: number }[] = [];
 
-  private mapearProdutoApi(produto: ProdutoApi): Produto {
-    const preco = this.formatarPreco(produto.price_cents, produto.currency);
-    return {
-      id: produto.id,
-      nome: produto.name,
-      imagem:
-        produto.image_url ??
-        (produto.steam_app_id
-          ? `https://cdn.cloudflare.steamstatic.com/steam/apps/${produto.steam_app_id}/library_600x900.jpg`
-          : undefined),
-      imagemPosicao: 'center',
-      precoOriginal: preco,
-      precoPromocional: preco,
-      desconto: 0,
-      genero: produto.category ?? '',
-      plataforma: produto.platform,
-      categorias: produto.category ? [produto.category] : [],
-      slug: produto.slug,
-      steamAppId: produto.steam_app_id?.toString(),
-    };
-  }
-
-  private formatarPreco(priceCents: number, currency: string): string {
-    if (priceCents === 0) {
-      return 'Grátis';
+    for (const g of CATALOGO) {
+      const nome = semAcento(g.nome);
+      let pontos = -1;
+      if (nome.startsWith(t)) pontos = 0;
+      else if (nome.includes(' ' + t)) pontos = 1;
+      else if (nome.includes(t)) pontos = 2;
+      else if (g.generos.some((x) => semAcento(x).includes(t))) pontos = 3;
+      if (pontos >= 0) achados.push({ g, pontos });
     }
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency,
-    }).format(priceCents / 100);
+
+    achados.sort((a, b) => a.pontos - b.pontos || a.g.nome.localeCompare(b.g.nome, 'pt-BR'));
+
+    const itens: Produto[] = achados.slice(0, limite).map(({ g }) => ({
+      id: String(g.appid),
+      nome: g.nome,
+      genero: g.generos.join(' / '),
+      plataforma: g.plataformas.join(' / '),
+      precoOriginal: '',
+      precoPromocional: '',
+      desconto: 0,
+      categorias: g.categorias,
+      slug: slugDoAppid(g.appid),
+      imagem:
+        g.capa ?? `https://cdn.cloudflare.steamstatic.com/steam/apps/${g.appid}/library_600x900.jpg`,
+    }));
+
+    return { itens, total: achados.length };
+  }
+
+  // continua existindo para quem já usava
+  buscarNoCatalogo(termo: string, limite = 6): Produto[] {
+    return this.buscarCatalogo(termo, limite).itens;
+  }
+
+  // Capa de reserva, usada só quando a capa principal do card não carrega
+  obterCapaAlternativa(id: string): Observable<string | null> {
+    return this.jogosApi.obterCapaAlternativa(Number(id));
+  }
+
+  private mapearJogoParaProduto(j: JogoCard): Produto {
+    return {
+      id: j.id.toString(),
+      nome: j.nome,
+      imagem: j.capa || 'assets/imagens/placeholder.jpg',
+      imagemPosicao: 'center',
+      precoOriginal: j.preco?.original ?? '',
+      precoPromocional: j.gratis ? 'Grátis' : (j.preco?.atual ?? 'Indisponível'),
+      precoNumero: j.gratis ? 0 : (j.preco?.valor ?? 0),
+      desconto: j.preco?.desconto ?? 0,
+      genero: j.generos.join(' / ') || 'Ação',
+      plataforma: j.plataformas.join(' / ') || 'PC',
+      categorias: j.categorias,
+      slug: slugDoAppid(j.id),
+      estoque: j.estoque,
+    };
   }
 }

@@ -2,6 +2,8 @@ import { Injectable, inject, computed } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AuthService } from '../services/auth';
 
+const EMAIL_ADMIN = 'admin@email.com';
+
 @Injectable({
   providedIn: 'root',
 })
@@ -14,7 +16,7 @@ export class AuthFacade {
     return !!this.usuarioAtual();
   }
 
-  ehAdmin = computed(() => this.usuarioAtual()?.role === 'admin');
+  ehAdmin = computed(() => this.usuarioAtual()?.email === EMAIL_ADMIN);
 
   // nome de exibição: usa o nome de usuário se tiver, senão cai no email
   nomeExibicao = computed(() => {

@@ -1,34 +1,26 @@
-import { HttpClient } from '@angular/common/http';
+import { Injectable, inject, signal, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
-import { catchError, Observable, throwError } from 'rxjs';
-import { environment } from '../../../environments/environment';
-import { ItemCarrinho } from '../models/item-carrinho';
-import { AuthService } from '../services/auth';
+import { Auth, user } from '@angular/fire/auth';
+import { Firestore, doc, docData, setDoc } from '@angular/fire/firestore';
+import { Subscription } from 'rxjs';
 import { CarrinhoService } from '../services/carrinho.service';
+import { ItemCarrinho } from '../models/item-carrinho';
 
-interface CartResponse {
-  items: Array<{
-    product_id: string;
-    quantity: number;
-    products: {
-      name: string;
-      image_url: string | null;
-      price_cents: number;
-    } | null;
-  }>;
-}
-
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root',
+})
 export class CarrinhoFacade {
-  private readonly carrinhoService = inject(CarrinhoService);
-  private readonly authService = inject(AuthService);
-  private readonly http = inject(HttpClient);
-  private readonly platformId = inject(PLATFORM_ID);
-  private readonly userId = signal<string | null>(null);
+  private carrinhoService = inject(CarrinhoService);
+  private auth = inject(Auth);
+  private firestore = inject(Firestore);
+  private platformId = inject(PLATFORM_ID);
 
-  readonly erroSincronizacao = signal<string | null>(null);
+  private user$ = user(this.auth);
+  private firestoreSub?: Subscription;
+  private userId = signal<string | null>(null);
+  private isCarregandoNuvem = false;
 
+  // Exposição das propriedades reativas para todo o resto do app
   itens = this.carrinhoService.itens;
   quantidade = this.carrinhoService.quantidade;
   total = this.carrinhoService.total;
@@ -36,134 +28,151 @@ export class CarrinhoFacade {
 
   constructor() {
     if (isPlatformBrowser(this.platformId)) {
-      this.authService.usuarioAtual$.subscribe((usuario) => {
-        const trocouUsuario = this.userId() !== usuario?.id;
-        this.userId.set(usuario?.id ?? null);
-        this.erroSincronizacao.set(null);
+      this.iniciarMonitoramentoAuth();
+    }
+  }
 
-        if (!trocouUsuario) {
-          return;
+  // 1. Escuta Login / Logout
+  private iniciarMonitoramentoAuth(): void {
+    this.user$.subscribe((usr) => {
+      if (usr) {
+        const uidAnterior = this.userId();
+        this.userId.set(usr.uid);
+
+        // Se logou ou trocou de usuário, busca os itens da nuvem
+        if (uidAnterior !== usr.uid) {
+          this.sincronizarComFirestore(usr.uid);
+        }
+      } else {
+        const estavaLogado = !!this.userId();
+        this.userId.set(null);
+
+        if (this.firestoreSub) {
+          this.firestoreSub.unsubscribe();
+          this.firestoreSub = undefined;
         }
 
-        if (usuario) {
-          this.carregarCarrinhoDaApi();
-        } else {
+        // Ao deslogar, limpa o carrinho local para segurança
+        if (estavaLogado) {
           this.carrinhoService.limpar();
         }
-      });
-    }
+      }
+    });
   }
 
   adicionarProduto(produto: ItemCarrinho): void {
     this.carrinhoService.adicionar(produto);
-    if (this.isUuid(produto.id)) {
-      this.sincronizarItem(produto.id, this.obterQuantidade(produto.id));
-    }
+    this.salvarSeLogado();
   }
 
   aumentarQuantidade(indice: number): void {
-    const item = this.itens()[indice];
-    if (!item) {
-      return;
-    }
-
     this.carrinhoService.aumentarQuantidade(indice);
-    if (this.isUuid(item.id)) {
-      this.atualizarQuantidadeNaApi(item.id, this.obterQuantidade(item.id));
-    }
+    this.salvarSeLogado();
   }
 
   diminuirQuantidade(indice: number): void {
-    const item = this.itens()[indice];
-    if (!item || (item.quantidade ?? 1) <= 1) {
-      return;
-    }
-
     this.carrinhoService.diminuirQuantidade(indice);
-    if (this.isUuid(item.id)) {
-      this.atualizarQuantidadeNaApi(item.id, this.obterQuantidade(item.id));
-    }
+    this.salvarSeLogado();
   }
 
   removerItem(indice: number): void {
-    const item = this.itens()[indice];
     this.carrinhoService.removerPorIndice(indice);
-
-    if (item && this.isUuid(item.id)) {
-      this.executarRequisicao(
-        this.http.delete<void>(`${environment.backendUrl}/api/cart/items/${item.id}`),
-        'Não foi possível remover o item do carrinho na nuvem.',
-      ).subscribe();
-    }
+    this.salvarSeLogado();
   }
 
+  // Limpa carrinho: limpa LocalStorage e atualiza a Nuvem (se logado)
   limparCarrinho(): void {
     this.carrinhoService.limpar();
+    this.salvarSeLogado();
+  }
 
-    if (this.userId()) {
-      this.executarRequisicao(
-        this.http.delete<void>(`${environment.backendUrl}/api/cart`),
-        'Não foi possível limpar o carrinho na nuvem.',
-      ).subscribe();
+  private salvarSeLogado(): void {
+    const uid = this.userId();
+    if (uid && !this.isCarregandoNuvem) {
+      this.salvarNoFirestore(uid, this.itens());
     }
   }
 
-  private carregarCarrinhoDaApi(): void {
-    this.executarRequisicao(
-      this.http.get<CartResponse>(`${environment.backendUrl}/api/cart`),
-      'Não foi possível carregar o carrinho da nuvem.',
-    ).subscribe({
-      next: (response) => {
-        this.carrinhoService.definirItens(
-          response.items
-            .filter((item) => item.products)
-            .map((item) => ({
-              id: item.product_id,
-              nome: item.products!.name,
-              preco: item.products!.price_cents / 100,
-              quantidade: item.quantity,
-              imagemUrl: item.products!.image_url ?? undefined,
-            })),
-        );
+  // 2. Busca na nuvem (Firestore) e preenche a máquina atual
+  private sincronizarComFirestore(uid: string): void {
+    if (this.firestoreSub) {
+      this.firestoreSub.unsubscribe();
+    }
+
+    const docRef = doc(this.firestore, `carrinhos/${uid}`);
+    let primeiraLeitura = true;
+    this.isCarregandoNuvem = true;
+
+    this.firestoreSub = docData(docRef).subscribe({
+      next: (dadosNuvem: any) => {
+        const itensNuvem: ItemCarrinho[] = dadosNuvem?.itens || [];
+        const itensLocais = this.itens();
+
+        if (primeiraLeitura) {
+          primeiraLeitura = false;
+          this.isCarregandoNuvem = false;
+
+          if (itensLocais.length > 0) {
+            // Caso tenha itens no dispositivo antes de logar, junta com o que está na nuvem
+            const itensMesclados = this.mesclarCarrinhos(itensNuvem, itensLocais);
+            this.carrinhoService.definirItens(itensMesclados);
+            this.salvarNoFirestore(uid, itensMesclados);
+          } else {
+            // Caso do PC/Outro dispositivo novo: carrega direto da nuvem para o LocalStorage do PC!
+            this.carrinhoService.definirItens(itensNuvem);
+          }
+        } else {
+          // Atualização em tempo real caso o carrinho seja modificado em outro dispositivo aberto
+          if (!this.saoIguais(itensNuvem, itensLocais)) {
+            this.carrinhoService.definirItens(itensNuvem);
+          }
+        }
+      },
+      error: (err) => {
+        console.error('Erro ao sincronizar carrinho com Firestore:', err);
+        this.isCarregandoNuvem = false;
       },
     });
   }
 
-  private sincronizarItem(productId: string, quantity: number): void {
-    this.executarRequisicao(
-      this.http.post(`${environment.backendUrl}/api/cart/items`, {
-        productId,
-        quantity,
-      }),
-      'Não foi possível adicionar o item ao carrinho na nuvem.',
-    ).subscribe();
+  // 3. Junta os itens da nuvem com os locais sem duplicar
+  private mesclarCarrinhos(nuvem: ItemCarrinho[], local: ItemCarrinho[]): ItemCarrinho[] {
+    const mapa = new Map<string, ItemCarrinho>();
+
+    nuvem.forEach((item) => {
+      const chave = item.id !== undefined && item.id !== null ? String(item.id) : item.nome;
+      mapa.set(chave, { ...item, quantidade: item.quantidade || 1 });
+    });
+
+    local.forEach((item) => {
+      const chave = item.id !== undefined && item.id !== null ? String(item.id) : item.nome;
+      if (mapa.has(chave)) {
+        const itemExistente = mapa.get(chave)!;
+        itemExistente.quantidade = (itemExistente.quantidade || 1) + (item.quantidade || 1);
+      } else {
+        mapa.set(chave, { ...item, quantidade: item.quantidade || 1 });
+      }
+    });
+
+    return Array.from(mapa.values());
   }
 
-  private atualizarQuantidadeNaApi(productId: string, quantity: number): void {
-    this.executarRequisicao(
-      this.http.patch(`${environment.backendUrl}/api/cart/items/${productId}`, { quantity }),
-      'Não foi possível atualizar a quantidade na nuvem.',
-    ).subscribe();
+  // 4. Compara se duas listas são iguais para evitar chamadas redundantes
+  private saoIguais(a: ItemCarrinho[], b: ItemCarrinho[]): boolean {
+    if (a.length !== b.length) return false;
+    return JSON.stringify(a) === JSON.stringify(b);
   }
 
-  private obterQuantidade(productId: string): number {
-    return this.itens().find((item) => String(item.id) === productId)?.quantidade ?? 1;
-  }
-
-  private executarRequisicao<T>(request: Observable<T>, mensagem: string) {
-    return request.pipe(
-      catchError((error) => {
-        this.erroSincronizacao.set(mensagem);
-        console.error(mensagem, error);
-        return throwError(() => error);
-      }),
-    );
-  }
-
-  private isUuid(value: ItemCarrinho['id']): value is string {
-    return (
-      typeof value === 'string' &&
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
-    );
+  // 5. Salva na nuvem no documento carrinhos/{uid}
+  private async salvarNoFirestore(uid: string, itens: ItemCarrinho[]): Promise<void> {
+    try {
+      const docRef = doc(this.firestore, `carrinhos/${uid}`);
+      await setDoc(docRef, {
+        itens,
+        atualizadoEm: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error('Erro ao salvar carrinho no Firestore:', err);
+    }
   }
 }

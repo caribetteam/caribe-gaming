@@ -1,0 +1,19 @@
+{
+  "/steam": {
+    "target": "https://store.steampowered.com",
+    "secure": true,
+    "changeOrigin": true,
+    "pathRewrite": { "^/steam": "" }
+  },
+  "/webapi": {
+    "target": "https://api.steampowered.com",
+    "secure": true,
+    "changeOrigin": true,
+    "pathRewrite": { "^/webapi": "" }
+  },
+  "/api": {
+    "target": "http://127.0.0.1:3000",
+    "secure": false,
+    "changeOrigin": true
+  }
+}

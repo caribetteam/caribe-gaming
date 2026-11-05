@@ -1,10 +1,4 @@
 <div class="pagina-carrinho">
-  @if (carrinhoFacade.erroSincronizacao()) {
-    <div class="mensagem-erro" role="alert">
-      {{ carrinhoFacade.erroSincronizacao() }}
-    </div>
-  }
-
   @if (carrinhoFacade.carrinhoVazio()) {
     <!-- CARRINHO VAZIO -->
 

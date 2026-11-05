@@ -1,5 +1,40 @@
+
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "app": {
+      "root": ".",
+      "framework": "angular"
+    },
+    "mp-backend": {
+      "root": "server/mp-backend",
+      "framework": "express"
+    }
+  },
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": 
+      "/steam/:path*", 
+      "destination": "https://store.steampowered.com/:path*" 
+    },
+    { "source": 
+      "/webapi/:path*", 
+      "destination": "https://api.steampowered.com/:path*" 
+    },
+    {
+      "source": "/steam/:path*",
+      "destination": "https://store.steampowered.com/:path*"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": {
+        "service": "mp-backend"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "app"
+      }
+    }
   ]
-} 
+}

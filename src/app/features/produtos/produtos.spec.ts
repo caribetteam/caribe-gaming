@@ -40,7 +40,6 @@ const mockProdutosService = {
 };
 
 const mockFavoritosService = {
-  favoritos$: of([]),
   ehFavorito: (id: string) => id === '1',
   toggleFavorito: vi.fn(),
   limparTodosFavoritos: vi.fn()
