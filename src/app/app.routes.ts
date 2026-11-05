@@ -7,7 +7,8 @@ import { Admin } from './features/admin/admin';
 import { adminGuard } from './core/guards/admin-guard';
 import { authGuard } from './core/guards/auth-guard';
 import { DetalheJogo } from './features/produtos/detalhe-jogo/detalhe-jogo';
-import { Sobrenos } from './features/sobrenos/sobrenos'; // <-- Importe o componente (ajuste o caminho se necessário)
+import { Sobrenos } from './features/sobrenos/sobrenos';
+import { NaoEncontrado } from './features/nao-encontrado/nao-encontrado';
 
 export const routes: Routes = [
   {
@@ -15,16 +16,18 @@ export const routes: Routes = [
     loadComponent: () => import('./home/home/home').then((m) => m.Home),
   },
   {
-    path: 'sobre-nos', // <-- Rota adicionada
+    path: 'sobre-nos',
     component: Sobrenos,
   },
   {
     path: 'jogos',
-    component: Produtos,
+    component: Produtos, // aceita /jogos?busca=termo
   },
-  { path: 'produto/:id', component: DetalheJogo },
+  // agora o endereço usa o nome do jogo: /produto/the-witcher-3-wild-hunt
+  // (links antigos com número, como /produto/292030, são trocados pelo nome automaticamente)
+  { path: 'produto/:slug', component: DetalheJogo },
   // rede de segurança: links antigos com "produtos/..." também funcionam
-  { path: 'produto/:id', redirectTo: 'produto/:id' },
+  { path: 'produtos/:slug', redirectTo: 'produto/:slug' },
   {
     path: 'login',
     component: Login,
@@ -52,8 +55,7 @@ export const routes: Routes = [
     component: Perfil,
     canActivate: [authGuard],
   },
-  {
-    path: '**',
-    redirectTo: '',
-  },
+  // página 404 (com joguinho). Fica por último: qualquer endereço que não existe cai aqui.
+  { path: '404', component: NaoEncontrado },
+  { path: '**', component: NaoEncontrado },
 ];

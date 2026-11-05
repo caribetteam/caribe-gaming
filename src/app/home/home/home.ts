@@ -7,6 +7,7 @@ import {
   DestroyRef,
   PLATFORM_ID,
 } from '@angular/core';
+import { slugDoAppid } from '../../core/utils/slug';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
@@ -218,10 +219,9 @@ export class Home implements OnInit, OnDestroy {
   }
 
   // --- NAVEGAÇÃO E COMPRA ---
-  irParaPaginaDoJogo(jogo: GameItem): void {
-    this.router.navigate(['/produto', jogo.id]);
+ irParaPaginaDoJogo(jogo: GameItem): void {
+    this.router.navigate(['/produto', slugDoAppid(jogo.id)]);
   }
-
   comprarAgora(jogo: GameItem) {
     // sem preço válido não dá para comprar direto: abre a página do jogo
     if (jogo.priceValue <= 0 && jogo.promoPrice !== 'Grátis') {

@@ -586,11 +586,145 @@
 .card-imagem img.esgotado-img { filter: grayscale(80%) opacity(0.6); }
 
 /* capa de reserva (vinda da API da Steam): aparece inteira, sem cortar */
-.card-imagem img.capa-horizontal {
-  object-fit: contain;
-  background: linear-gradient(160deg, #14213a, #0a1626);
+/* =====================================================================
+   produtos.css  —  3 mudanças
+   ===================================================================== */
+
+/* 1) TROCAR a regra .card-imagem existente por esta.
+      As capas da Steam (library_600x900) têm proporção 2:3. Com 3:4 o card cortava as laterais
+      e os títulos ficavam "pela metade". Com 2:3 a capa aparece inteira. */
+.card-imagem {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #0a1626;
+  position: relative;
 }
 
+/* 2) APAGAR a regra antiga ".card-imagem img.capa-horizontal { ... }" e colar tudo abaixo
+      no final do arquivo (antes do bloco de RESPONSIVIDADE). */
+
+/* capa de reserva (imagem horizontal da Steam): aparece inteira, em cima de um fundo
+   desfocado feito com ela mesma, em vez de uma faixinha solta no card */
+.card-imagem.capa-reserva::before {
+  content: '';
+  position: absolute;
+  inset: -24px;
+  background: var(--capa) center / cover no-repeat;
+  filter: blur(18px) brightness(0.55) saturate(1.2);
+  transform: scale(1.1);
+}
+
+.card-imagem img.capa-horizontal {
+  position: relative;
+  z-index: 1;
+  object-fit: contain;
+}
+
+/* nem a reserva carregou: cartão com o nome do jogo (em vez do ícone de imagem quebrada) */
+.card-imagem.sem-imagem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+  text-align: center;
+  background: linear-gradient(160deg, #1b3a5c, #0a1626);
+}
+
+.card-imagem.sem-imagem::before {
+  content: '🏴‍☠️';
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 2.2rem;
+  opacity: 0.85;
+}
+
+.card-imagem.sem-imagem::after {
+  content: attr(data-nome);
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 52%;
+  font-size: 0.85rem;
+  font-weight: 800;
+  line-height: 1.25;
+  color: #ffffff;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 3) Pesquisa, erro e carregando */
+.chip-busca {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  padding: 8px 8px 8px 14px;
+  background: rgba(79, 195, 232, 0.14);
+  border: 1px solid rgba(79, 195, 232, 0.5);
+  border-radius: 999px;
+  font-size: 0.88rem;
+  color: #fff;
+  max-width: 100%;
+}
+
+.chip-busca span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chip-busca button {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.75rem;
+  line-height: 1;
+  transition: background 0.2s;
+}
+
+.chip-busca button:hover {
+  background: #ff4757;
+}
+
+.estado-erro-lista {
+  background: #14213a;
+  border: 1px solid rgba(255, 71, 87, 0.45);
+  border-radius: 16px;
+  padding: 44px 24px;
+  text-align: center;
+}
+
+.estado-erro-lista .erro-icone {
+  font-size: 3rem;
+  margin-bottom: 8px;
+}
+
+.estado-erro-lista h3 {
+  margin: 0 0 8px;
+  font-size: 1.3rem;
+}
+
+.estado-erro-lista p {
+  margin: 0 0 20px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.btn-carrinho.btn-tentar {
+  flex: none;
+  padding: 10px 22px;
+  font-size: 0.9rem;
+}
 .preco-promocional.indisponivel {
   color: rgba(255, 255, 255, 0.45);
   font-size: 0.85rem;

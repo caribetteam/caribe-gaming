@@ -20,13 +20,18 @@
       [(ngModel)]="termoPesquisa"
       (input)="pesquisar()"
       (focus)="pesquisar()"
+      (keydown)="aoTeclar($event)"
       autocomplete="off"
+      role="combobox"
+      aria-label="Pesquisar jogos"
+      aria-autocomplete="list"
+      [attr.aria-expanded]="mostrarSugestoes"
     />
 
     <button
       type="button"
       class="search-button"
-      (click)="pesquisar()"
+      (click)="buscarTudo()"
       aria-label="Pesquisar"
     >
       <i class="fa-solid fa-magnifying-glass"></i>
@@ -36,46 +41,83 @@
     <!-- ===== SUGESTÕES ===== -->
     @if (mostrarSugestoes && termoPesquisa.trim() !== '') {
 
-      <div class="search-suggestions">
+      <div class="search-suggestions" role="listbox">
 
-        @if (produtosFiltrados.length > 0) {
+        @if (erroBusca) {
 
-          @for (produto of produtosFiltrados; track produto.id) {
+          <div class="no-results erro">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span>Não foi possível pesquisar agora. Tente de novo.</span>
+          </div>
+
+        } @else if (sugestoes.length > 0) {
+
+          @for (produto of sugestoes; track produto.id; let i = $index) {
 
             <button
               type="button"
               class="search-suggestion"
+              [class.ativo]="i === indiceAtivo"
+              role="option"
+              [attr.aria-selected]="i === indiceAtivo"
+              (mousedown)="$event.preventDefault()"
+              (mouseenter)="indiceAtivo = i"
               (click)="selecionarJogo(produto)"
             >
 
-              <div class="suggestion-icon">
+              <span class="suggestion-thumb">
+                <img
+                  [src]="produto.imagem"
+                  [alt]="produto.nome"
+                  loading="lazy"
+                  (error)="imagemSugestaoFalhou($event, produto)"
+                />
                 <i class="fa-solid fa-gamepad"></i>
-              </div>
+              </span>
 
-              <div class="suggestion-info">
-
+              <span class="suggestion-info">
                 <span class="suggestion-name">
-                  {{ produto.nome }}
+                  @for (parte of partesNome(produto.nome); track $index) {
+                    @if (parte.destaque) {
+                      <mark>{{ parte.texto }}</mark>
+                    } @else {
+                      {{ parte.texto }}
+                    }
+                  }
                 </span>
+                <span class="suggestion-genre">{{ produto.genero }}</span>
+              </span>
 
-                <span class="suggestion-genre">
-                  {{ produto.genero }}
+              @if (precoDe(produto); as p) {
+                <span class="suggestion-price" [class.indisponivel]="p.precoPromocional === 'Indisponível'">
+                  @if (p.desconto && p.desconto !== 0 && p.precoOriginal) {
+                    <s>{{ p.precoOriginal }}</s>
+                  }
+                  {{ p.precoPromocional }}
                 </span>
-
-              </div>
+              }
 
             </button>
 
+          }
+
+          @if (totalResultados > sugestoes.length) {
+            <button
+              type="button"
+              class="suggestion-all"
+              (mousedown)="$event.preventDefault()"
+              (click)="buscarTudo()"
+            >
+              Ver todos os {{ totalResultados }} resultados
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
           }
 
         } @else {
 
           <div class="no-results">
             <i class="fa-solid fa-magnifying-glass"></i>
-
-            <span>
-              Nenhum jogo encontrado
-            </span>
+            <span>Nenhum jogo encontrado para “{{ termoPesquisa.trim() }}”</span>
           </div>
 
         }

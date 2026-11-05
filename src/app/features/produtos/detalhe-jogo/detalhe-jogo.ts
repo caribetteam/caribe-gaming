@@ -1,5 +1,5 @@
-import { Component, OnInit, inject, ChangeDetectorRef, PLATFORM_ID } from '@angular/core';
-import { CommonModule, Location, isPlatformBrowser } from '@angular/common';
+import { Component, OnInit, OnDestroy, HostListener, inject, ChangeDetectorRef, PLATFORM_ID } from '@angular/core';
+import { CommonModule, Location, DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { take } from 'rxjs';
@@ -9,6 +9,7 @@ import { FavoritosService } from '../../../core/services/favoritos.service';
 import { DetalhesJogo, Comentario, JogoCard, Dlc } from '../../../core/models/jogo';
 import { LoaderBarco } from '../carregamento/cacrregamento-barco';
 import { comentariosDoJogo } from '../comentarios';
+import { appidDoSlug, slugDoAppid } from '../../../core/utils/slug';
 
 @Component({
   selector: 'app-detalhe-jogo',
@@ -17,7 +18,7 @@ import { comentariosDoJogo } from '../comentarios';
   templateUrl: './detalhe-jogo.html',
   styleUrls: ['./detalhe-jogo.css']
 })
-export class DetalheJogo implements OnInit {
+export class DetalheJogo implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private location = inject(Location);
@@ -26,6 +27,7 @@ export class DetalheJogo implements OnInit {
   private carrinhoFacade = inject(CarrinhoFacade);
   private favoritosService = inject(FavoritosService);
   private platformId = inject(PLATFORM_ID);
+  private doc = inject(DOCUMENT);
 
   jogo: DetalhesJogo | null = null;
   carregando: boolean = true;
@@ -58,6 +60,8 @@ export class DetalheJogo implements OnInit {
 
   // Avaliações do site
   exibirModalAvaliacao: boolean = false;
+  tentouEnviar: boolean = false;
+  readonly notasModal = [1, 2, 3, 4, 5];
   novoNome: string = '';
   novoTexto: string = '';
   novaNota: number = 5;
@@ -66,6 +70,8 @@ export class DetalheJogo implements OnInit {
   mediaSite: string = '—';
   mediaSiteNum: number = 0;
   distribuicao: { estrelas: number; qtd: number; pct: number }[] = [];
+  // Voto de cada comentário neste navegador: { idDoComentario: 'like' | 'dislike' }
+  votos: Record<number, 'like' | 'dislike'> = {};
   readonly coresAvatares = ['#00d2d3', '#ff9f43', '#ee5253', '#0abde3', '#10ac84', '#5f27cd'];
 
   // O slide atual é a capa vertical? (usa fundo desfocado e mostra a imagem inteira)
@@ -79,12 +85,30 @@ export class DetalheJogo implements OnInit {
     if (!isPlatformBrowser(this.platformId)) return;
 
     this.route.paramMap.subscribe((params) => {
-      this.jogoIdOuSlug = params.get('id') || '';
-      if (this.jogoIdOuSlug) {
-        this.resetarEstado();
-        this.carregarTudo();
+      const parametro = params.get('slug') ?? params.get('id') ?? '';
+      const appid = appidDoSlug(parametro);
+
+      // endereço que não existe: vai para a página 404 (sem deixar o endereço errado no histórico)
+      if (appid === null) {
+        this.router.navigate(['/404'], { replaceUrl: true });
+        return;
       }
+
+      // link antigo com número (/produto/292030): troca pelo nome do jogo e espera a nova rota
+      if (/^\d+$/.test(parametro.trim())) {
+        this.router.navigate(['/produto', slugDoAppid(appid)], { replaceUrl: true });
+        return;
+      }
+
+      // por dentro, o resto do componente continua trabalhando com o appid
+      this.jogoIdOuSlug = String(appid);
+      this.resetarEstado();
+      this.carregarTudo();
     });
+  }
+
+  ngOnDestroy(): void {
+    this.travarRolagem(false);
   }
 
   private resetarEstado(): void {
@@ -176,7 +200,7 @@ export class DetalheJogo implements OnInit {
   }
 
   abrirJogo(id: number): void {
-    this.router.navigate(['/produto', id]);
+    this.router.navigate(['/produto', slugDoAppid(id)]);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -275,6 +299,7 @@ export class DetalheJogo implements OnInit {
   }
 
   private get chaveAvaliacoes(): string { return `caribe_avaliacoes_v2_${this.jogoIdOuSlug}`; }
+  private get chaveVotos(): string { return `caribe_votos_v1_${this.jogoIdOuSlug}`; }
 
   private comentariosPadrao(): Comentario[] {
     if (!this.jogo) return [];
@@ -289,7 +314,23 @@ export class DetalheJogo implements OnInit {
     } catch {
       this.listaComentarios = this.comentariosPadrao();
     }
+    this.carregarVotos();
     this.recalcularResumo();
+  }
+
+  private carregarVotos(): void {
+    try {
+      const salvos = localStorage.getItem(this.chaveVotos);
+      this.votos = salvos ? JSON.parse(salvos) : {};
+    } catch {
+      this.votos = {};
+    }
+  }
+
+  private salvarVotos(): void {
+    try {
+      localStorage.setItem(this.chaveVotos, JSON.stringify(this.votos));
+    } catch {}
   }
 
   salvarAvaliacoes(): void {
@@ -310,8 +351,12 @@ export class DetalheJogo implements OnInit {
     });
   }
 
+  get nomeInvalido(): boolean { return this.novoNome.trim().length < 2; }
+  get textoInvalido(): boolean { return this.novoTexto.trim().length < 10; }
+
   enviarAvaliacao(): void {
-    if (!this.novoNome.trim() || !this.novoTexto.trim()) return;
+    this.tentouEnviar = true;
+    if (this.nomeInvalido || this.textoInvalido) return;
     const nova: Comentario = {
       id: Date.now(),
       autor: this.novoNome.trim(),
@@ -381,22 +426,68 @@ export class DetalheJogo implements OnInit {
       desconto: this.desconto,
       categorias: [],
       imagem: this.galeriaImagens[0] ?? this.jogo.background_image,
-      slug: id
+      slug: slugDoAppid(id)
     });
 
     this.favorito = this.favoritosService.ehFavorito(id);
     this.exibirToast(this.favorito ? '❤️ Salvo nos favoritos!' : '💔 Removido dos favoritos!');
   }
 
-  abrirModal(): void { this.exibirModalAvaliacao = true; }
-  fecharModal(): void {
-    this.exibirModalAvaliacao = false;
-    this.novoNome = '';
-    this.novoTexto = '';
+  abrirModal(): void {
+    this.tentouEnviar = false;
+    this.novaNota = 5;
+    this.exibirModalAvaliacao = true;
+    this.travarRolagem(true);
   }
 
-  darLike(c: Comentario): void { c.likes++; this.salvarAvaliacoes(); }
-  darDislike(c: Comentario): void { c.dislikes++; this.salvarAvaliacoes(); }
+  fecharModal(): void {
+    this.exibirModalAvaliacao = false;
+    this.tentouEnviar = false;
+    this.novoNome = '';
+    this.novoTexto = '';
+    this.travarRolagem(false);
+  }
+
+  // clicar no fundo escuro (e não dentro do cartão) fecha o modal
+  cliqueNoFundo(event: MouseEvent): void {
+    if (event.target === event.currentTarget) this.fecharModal();
+  }
+
+  @HostListener('document:keydown.escape')
+  aoApertarEsc(): void {
+    if (this.exibirModalAvaliacao) this.fecharModal();
+  }
+
+  // com o modal aberto, a página de trás não rola
+  private travarRolagem(travar: boolean): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    this.doc.body.style.overflow = travar ? 'hidden' : '';
+  }
+
+  // Um voto por pessoa em cada comentário:
+  //  - clicar em 👍 marca; clicar de novo desmarca
+  //  - se já tinha 👎, clicar em 👍 troca o voto (os dois nunca ficam marcados juntos)
+  votar(c: Comentario, tipo: 'like' | 'dislike'): void {
+    const atual = this.votos[c.id];
+
+    if (atual === tipo) {
+      // desfaz o voto
+      if (tipo === 'like') c.likes = Math.max(0, c.likes - 1);
+      else c.dislikes = Math.max(0, c.dislikes - 1);
+      delete this.votos[c.id];
+    } else {
+      // tira o voto anterior (se houver) e coloca o novo
+      if (atual === 'like') c.likes = Math.max(0, c.likes - 1);
+      if (atual === 'dislike') c.dislikes = Math.max(0, c.dislikes - 1);
+      if (tipo === 'like') c.likes++;
+      else c.dislikes++;
+      this.votos[c.id] = tipo;
+    }
+
+    this.salvarVotos();
+    this.salvarAvaliacoes();
+    this.cdr.markForCheck();
+  }
 
   private exibirToast(msg: string): void {
     this.mensagemToast = msg;
