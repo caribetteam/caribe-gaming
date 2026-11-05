@@ -173,6 +173,7 @@
             [alt]="produto.nome"
             [style.object-position]="produto.imagemPosicao"
             [class.esgotado-img]="produto.estoque === false"
+            (load)="imagemCarregou($event, produto)"
             (error)="imagemFalhou($event, produto)"
           />
 

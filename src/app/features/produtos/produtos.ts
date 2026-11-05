@@ -8,6 +8,31 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ProdutosService, semAcento } from '../../core/services/produtos.service';
 import { slugDoAppid } from '../../core/utils/slug';
 import { LoaderBarco } from './carregamento/cacrregamento-barco';
+
+// Capas que a Steam gera sozinha (arte pequena em cima e degradê embaixo) quase não têm detalhe
+// na parte de baixo. Se a média ficar abaixo deste valor, a capa é trocada pela horizontal.
+const LIMITE_CAPA_LISA = 2.5;
+
+// Se alguma capa boa for trocada sem querer, coloque o appid aqui. Para forçar a troca, use o outro.
+const SEMPRE_CAPA_VERTICAL = new Set<number>([]);
+const SEMPRE_CAPA_HORIZONTAL = new Set<number>([]);
+
+// Média das diferenças entre pixels vizinhos nos 40% de baixo da capa (0 = totalmente liso)
+function detalheInferior(dados: Uint8ClampedArray, w: number, h: number): number {
+  const lum = (x: number, y: number) => {
+    const i = (y * w + x) * 4;
+    return 0.299 * dados[i] + 0.587 * dados[i + 1] + 0.114 * dados[i + 2];
+  };
+  let soma = 0;
+  let qtd = 0;
+  for (let y = Math.floor(h * 0.6); y < h - 1; y++) {
+    for (let x = 0; x < w - 1; x++) {
+      soma += Math.abs(lum(x, y) - lum(x + 1, y)) + Math.abs(lum(x, y) - lum(x, y + 1));
+      qtd += 2;
+    }
+  }
+  return qtd ? soma / qtd : 99;
+}
 import { CarrinhoFacade } from '../../core/facades/carrinho.facade';
 import { FavoritosService } from '../../core/services/favoritos.service';
 import { Produto } from '../../core/models/jogo';
@@ -65,6 +90,7 @@ export class Produtos implements OnInit {
 
   readonly faixasPreco = [
     { id: 'todos', nome: 'Todos' },
+    { id: 'gratis', nome: 'Grátis' },
     { id: '0-50', nome: 'Até R$50' },
     { id: '50-100', nome: 'R$50 – R$100' },
     { id: 'acima-100', nome: 'Acima de R$100' },
@@ -330,6 +356,51 @@ export class Produtos implements OnInit {
 
   rastrear(_indice: number, produto: Produto): string {
     return produto.id;
+  }
+
+  // Roda quando a capa carregou. Se for uma capa automática da Steam, troca pela horizontal inteira.
+  imagemCarregou(event: Event, produto: Produto): void {
+    const img = event.target as HTMLImageElement;
+    if (!isPlatformBrowser(this.platformId) || img.dataset['verificada']) return;
+    img.dataset['verificada'] = '1';
+
+    const appid = Number(produto.id);
+    if (SEMPRE_CAPA_VERTICAL.has(appid)) return;
+
+    if (SEMPRE_CAPA_HORIZONTAL.has(appid)) {
+      this.trocarPorHorizontal(img, produto);
+      return;
+    }
+
+    // outra cópia da imagem, em modo que permite ler os pixels
+    const sonda = new Image();
+    sonda.crossOrigin = 'anonymous';
+    sonda.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 40;
+        canvas.height = 60;
+        const c = canvas.getContext('2d', { willReadFrequently: true });
+        if (!c) return;
+        c.drawImage(sonda, 0, 0, 40, 60);
+        const dados = c.getImageData(0, 0, 40, 60).data;
+        if (detalheInferior(dados, 40, 60) < LIMITE_CAPA_LISA) this.trocarPorHorizontal(img, produto);
+      } catch {
+        /* sem permissão para ler os pixels: mantém a capa como está */
+      }
+    };
+    sonda.onerror = () => {}; // o servidor não deixou ler: mantém a capa como está
+    sonda.src = img.currentSrc || img.src;
+  }
+
+  private trocarPorHorizontal(img: HTMLImageElement, produto: Produto): void {
+    const caixa = img.parentElement as HTMLElement | null;
+    const url = `https://cdn.cloudflare.steamstatic.com/steam/apps/${produto.id}/header.jpg`;
+    img.dataset['reserva'] = '1'; // se esta também falhar, mostra o cartão com o nome
+    caixa?.style.setProperty('--capa', `url("${url}")`);
+    caixa?.classList.add('capa-reserva');
+    img.classList.add('capa-horizontal');
+    img.src = url;
   }
 
   // Só roda quando a capa principal do card falhou (cdn.cloudflare ou a manual).
