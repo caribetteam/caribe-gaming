@@ -69,4 +69,8 @@ export class AuthService {
   get usuarioAtual$() {
     return user(this.auth);
   }
+
+  obterAccessToken(): Promise<string | null> {
+    return this.auth.currentUser?.getIdToken() ?? Promise.resolve(null);
+  }
 }

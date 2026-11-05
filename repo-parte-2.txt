@@ -1,0 +1,5946 @@
+PARTE 2 DE 8
+
+===== src/app/features/checkout/checkout/checkout.html =====
+<div class="pagina-checkout">
+  <h2 class="checkout-titulo">Checkout dos Mares</h2>
+
+  @if (compraFinalizada()) {
+    <div class="checkout-sucesso">
+      <div class="sucesso-icon">⚓ ✓</div>
+      <h3>Tesouros adquiridos com sucesso!</h3>
+      <p>Seu pedido foi processado com sucesso e os jogos foram liberados para sua tripulação.</p>
+      <button class="btn-acao btn-primary btn-voltar-jogos" routerLink="/jogos">
+        Continuar Navegando
+      </button>
+    </div>
+  }
+
+  @if (carrinhoFacade.carrinhoVazio() && !compraFinalizada()) {
+    <div class="checkout-vazio">
+      <p>Seu porão de tesouros está vazio. Adicione jogos antes de finalizar a compra.</p>
+      <button class="btn-acao btn-primary" routerLink="/jogos">Explorar Catálogo</button>
+    </div>
+  } @else if (!compraFinalizada()) {
+    <div class="checkout-grid">
+      <!-- FORMULÁRIO DE DADOS E PAGAMENTO -->
+      <form class="checkout-form" [formGroup]="formulario">
+        <h3>1. Dados do Aventureiro</h3>
+
+        <div class="field-group">
+          <label class="field-label">Nome Completo</label>
+          <input
+            type="text"
+            formControlName="nome"
+            placeholder="Ex: Edward Kenway"
+            [class.input-erro]="campoInvalido('nome')"
+          />
+          @if (campoInvalido('nome')) {
+            <small>Por favor, informe seu nome completo (mínimo 3 caracteres).</small>
+          }
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">E-mail para Envio das Chaves</label>
+          <input
+            type="email"
+            formControlName="email"
+            placeholder="Ex: capitao@caribe.com"
+            [class.input-erro]="campoInvalido('email')"
+          />
+          @if (campoInvalido('email')) {
+            <small>Informe um e-mail válido para receber as chaves de ativação.</small>
+          }
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">CPF ou CNPJ</label>
+          <input
+            type="text"
+            formControlName="cpfCnpj"
+            inputmode="numeric"
+            autocomplete="off"
+            placeholder="Somente números"
+            [class.input-erro]="campoInvalido('cpfCnpj')"
+          />
+          @if (campoInvalido('cpfCnpj')) {
+            <small>Informe um CPF ou CNPJ válido para a cobrança Sandbox.</small>
+          }
+        </div>
+
+        <h3>2. Forma de Pagamento</h3>
+        <div class="metodos-pagamento">
+          <button
+            type="button"
+            class="metodo-card"
+            [class.selecionado]="metodoPagamento() === 'pix'"
+            (click)="selecionarPagamento('pix')"
+          >
+            <span class="metodo-icon">⚡</span>
+            <div class="metodo-info">
+              <strong>PIX</strong>
+              <span>Aprovação instantânea</span>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            class="metodo-card"
+            [class.selecionado]="metodoPagamento() === 'cartao'"
+            (click)="selecionarPagamento('cartao')"
+          >
+            <span class="metodo-icon">💳</span>
+            <div class="metodo-info">
+              <strong>Cartão de Crédito</strong>
+              <span>Até 12x sem juros</span>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            class="metodo-card"
+            [class.selecionado]="metodoPagamento() === 'boleto'"
+            (click)="selecionarPagamento('boleto')"
+          >
+            <span class="metodo-icon">📄</span>
+            <div class="metodo-info">
+              <strong>Boleto Bancário</strong>
+              <span>Compensação em até 2 dias</span>
+            </div>
+          </button>
+        </div>
+
+        <button
+          type="button"
+          class="btn-acao btn-primary btn-finalizar"
+          (click)="finalizar()"
+          [disabled]="formulario.invalid || processando()"
+        >
+          <i class="fa-solid fa-lock"></i>
+          {{ processando() ? 'Processando...' : 'Finalizar Compra Segura' }}
+        </button>
+        @if (mensagemErro()) {
+          <div class="mensagem-erro" role="alert">{{ mensagemErro() }}</div>
+        }
+      </form>
+
+      <!-- RESUMO DETALHADO DO PEDIDO -->
+      <div class="checkout-lateral">
+        <section class="checkout-resumo">
+          <h3>🏴‍☠️ Resumo do Pedido</h3>
+
+          <div class="resumo-itens">
+            @for (item of carrinhoFacade.itens(); track $index) {
+              <div class="checkout-item-detalhado">
+                @if (item.imagemUrl) {
+                  <img [src]="item.imagemUrl" [alt]="item.nome" class="item-thumb" />
+                }
+                <div class="item-detalhes">
+                  <span class="item-nome">{{ item.nome }}</span>
+                  <span class="item-meta"
+                    >{{ item.plataforma || 'PC' }} · Qtd: {{ item.quantidade || 1 }}</span
+                  >
+                </div>
+                <strong class="item-preco">
+                  R$ {{ (item.preco * (item.quantidade || 1)).toFixed(2) }}
+                </strong>
+              </div>
+            }
+          </div>
+
+          <!-- DISCRIMINAÇÃO DE TOTAIS -->
+          <div class="checkout-calculo">
+            <div class="linha-calculo">
+              <span>Subtotal ({{ carrinhoFacade.quantidade() }} itens)</span>
+              <span>R$ {{ carrinhoFacade.total().toFixed(2) }}</span>
+            </div>
+            <div class="linha-calculo">
+              <span>Entrega Digital</span>
+              <span class="badge-gratis">GRÁTIS (Instantânea)</span>
+            </div>
+            <div class="checkout-total-box">
+              <span class="total-label">Total a pagar:</span>
+              <strong class="checkout-total">R$ {{ carrinhoFacade.total().toFixed(2) }}</strong>
+            </div>
+          </div>
+        </section>
+
+        <!-- BLOCO DE SEGURANÇA E PRIVACIDADE PIRATA -->
+        <section class="pirate-security" [class.aberto]="segurancaAberta()">
+          <div class="security-header" (click)="toggleSeguranca()">
+            <div class="security-title">
+              <span class="pirate-icon">⚓</span>
+              <div>
+                <h4>Segurança e Privacidade</h4>
+                <p>🏴‍☠️ Pagamentos seguros · Chaves 100% originais</p>
+              </div>
+            </div>
+            <span class="arrow" [class.rotacionada]="segurancaAberta()">›</span>
+          </div>
+
+          @if (segurancaAberta()) {
+            <div class="payment-security">
+              <p>
+                ⚓ Navegue com tranquilidade! Seus dados pessoais e transações são protegidos com
+                criptografia de ponta a ponta.
+              </p>
+              <div class="security-badge">🛡️ Sua tripulação está protegida</div>
+            </div>
+          }
+        </section>
+      </div>
+    </div>
+  }
+</div>
+
+
+===== src/app/features/checkout/checkout/checkout.spec.ts =====
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { of } from 'rxjs';
+import { vi } from 'vitest';
+
+import { Checkout } from './checkout';
+import { CarrinhoFacade } from '../../../core/facades/carrinho.facade';
+import { AuthFacade } from '../../../core/facades/auth.facade';
+import { CheckoutApiService } from '../../../core/services/checkout-api.service';
+
+describe('Checkout', () => {
+  let component: Checkout;
+  let fixture: ComponentFixture<Checkout>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [Checkout],
+      providers: [
+        provideRouter([]),
+        {
+          provide: CarrinhoFacade,
+          useValue: {
+            itens: vi.fn().mockReturnValue([]),
+            quantidade: vi.fn().mockReturnValue(0),
+            total: vi.fn().mockReturnValue(0),
+            carrinhoVazio: vi.fn().mockReturnValue(true),
+            limparCarrinho: vi.fn(),
+          },
+        },
+        {
+          provide: AuthFacade,
+          useValue: { usuarioAtual: vi.fn().mockReturnValue(null) },
+        },
+        {
+          provide: CheckoutApiService,
+          useValue: { criarPedido: vi.fn().mockReturnValue(of({ order: {} })) },
+        },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(Checkout);
+    component = fixture.componentInstance;
+    await fixture.whenStable();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+});
+
+
+===== src/app/features/checkout/checkout/checkout.ts =====
+import { Component, inject, signal, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { CarrinhoFacade } from '../../../core/facades/carrinho.facade';
+import { AuthFacade } from '../../../core/facades/auth.facade';
+import { CheckoutApiService } from '../../../core/services/checkout-api.service';
+
+@Component({
+  selector: 'app-checkout',
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  templateUrl: './checkout.html',
+  styleUrl: './checkout.css',
+})
+export class Checkout implements OnInit {
+  carrinhoFacade = inject(CarrinhoFacade);
+  authFacade = inject(AuthFacade);
+  private fb = inject(FormBuilder);
+  private checkoutApi = inject(CheckoutApiService);
+
+  compraFinalizada = signal<boolean>(false);
+  processando = signal<boolean>(false);
+  mensagemErro = signal<string | null>(null);
+  private idempotencyKey: string | null = null;
+  metodoPagamento = signal<'pix' | 'cartao' | 'boleto'>('pix');
+  segurancaAberta = signal<boolean>(false);
+
+  // Regex estrita para validação de e-mail
+  private emailPattern = '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$';
+
+  formulario: FormGroup = this.fb.group({
+    nome: ['', [Validators.required, Validators.minLength(3)]],
+    email: ['', [Validators.required, Validators.pattern(this.emailPattern)]],
+    cpfCnpj: ['', [Validators.required, Validators.pattern(/^\d{11}(\d{3})?$/)]],
+  });
+
+  ngOnInit(): void {
+    const usuario = this.authFacade.usuarioAtual();
+    if (usuario) {
+      if (usuario.displayName) {
+        this.formulario.patchValue({ nome: usuario.displayName });
+      }
+      if (usuario.email) {
+        this.formulario.patchValue({ email: usuario.email });
+      }
+    }
+  }
+
+  campoInvalido(nomeCampo: string): boolean {
+    const campo = this.formulario.get(nomeCampo);
+    return !!(campo && campo.invalid && (campo.dirty || campo.touched));
+  }
+
+  selecionarPagamento(metodo: 'pix' | 'cartao' | 'boleto') {
+    this.metodoPagamento.set(metodo);
+  }
+
+  toggleSeguranca() {
+    this.segurancaAberta.update((v) => !v);
+  }
+
+  finalizar() {
+    if (this.formulario.invalid || this.carrinhoFacade.carrinhoVazio()) {
+      this.formulario.markAllAsTouched();
+      return;
+    }
+
+    this.processando.set(true);
+    this.mensagemErro.set(null);
+    this.idempotencyKey ??= crypto.randomUUID();
+    const { nome, email, cpfCnpj } = this.formulario.getRawValue();
+
+    this.checkoutApi
+      .criarPedido(this.carrinhoFacade.itens(), this.metodoPagamento(), {
+        name: nome,
+        email,
+        cpfCnpj,
+      }, this.idempotencyKey)
+      .subscribe({
+        next: () => {
+          this.carrinhoFacade.limparCarrinho();
+          this.compraFinalizada.set(true);
+          this.idempotencyKey = null;
+          this.processando.set(false);
+        },
+        error: (error) => {
+          this.processando.set(false);
+          this.mensagemErro.set(
+            error?.error?.error?.message ??
+              'Não foi possível processar o pedido. Tente novamente.',
+          );
+        },
+      });
+  }
+}
+
+
+===== src/app/features/login/login-angular.spec.ts =====
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Login } from './login';
+import { provideRouter } from '@angular/router';
+import { By } from '@angular/platform-browser';
+import { AuthService } from '../../core/services/auth';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+const mockAuthService = {
+    loginAsync: vi.fn().mockResolvedValue({}),
+    loginComGoogleAsync: vi.fn().mockResolvedValue({}),
+    recuperarSenhaAsync: [MASCARADO],
+};
+
+describe('Login - Teste Padrão Angular TestBed', () => {
+    let component: Login;
+    let fixture: ComponentFixture<Login>;
+
+    beforeEach(async () => {
+        await TestBed.configureTestingModule({
+            imports: [Login],
+            providers: [
+                provideRouter([]),
+                { provide: AuthService, useValue: mockAuthService }
+            ]
+        }).compileComponents();
+
+        fixture = TestBed.createComponent(Login);
+        component = fixture.componentInstance;
+        fixture.detectChanges();
+    });
+
+    it('deve verificar se o botão de login está presente no DOM', () => {
+        const compiled = fixture.nativeElement as HTMLElement;
+        const loginButton = compiled.querySelector('button[type="submit"]');
+
+        expect(loginButton).toBeTruthy();
+    });
+
+    it('deve verificar se o botão de esqueci a senha existe no DOM', () => {
+        const forgotPasswordEl = [MASCARADO]
+            By.css('button.link-esqueci')
+        );
+
+        expect(forgotPasswordEl).toBeTruthy();
+    });
+});
+
+===== src/app/features/login/login-vitest.spec.ts =====
+import { render, screen, fireEvent } from '@testing-library/angular';
+import { Login } from './login';
+import { provideRouter } from '@angular/router';
+import { AuthService } from '../../core/services/auth';
+import { describe, it, expect, vi } from 'vitest';
+
+const mockAuthService = {
+    loginAsync: vi.fn().mockResolvedValue({}),
+    loginComGoogleAsync: vi.fn().mockResolvedValue({}),
+    recuperarSenhaAsync: [MASCARADO],
+};
+
+describe('Login - Teste Simples com Vitest', () => {
+    it('deve disparar a ação ao clicar no botão de login', async () => {
+        await render(Login, {
+            providers: [
+                provideRouter([]),
+                { provide: AuthService, useValue: mockAuthService }
+            ]
+        });
+
+        // Seleciona especificamente o botão do tipo submit ou pelo texto exato "Entrar"
+        const loginButton = screen.getByRole('button', { name: /^entrar$/i });
+        expect(loginButton).toBeTruthy();
+
+        fireEvent.click(loginButton);
+        expect(loginButton).toBeDefined();
+    });
+
+    it('deve possuir e interagir com o botão de esqueci a senha', async () => {
+        await render(Login, {
+            providers: [
+                provideRouter([]),
+                { provide: AuthService, useValue: mockAuthService }
+            ]
+        });
+
+        // Ajustado para o texto real do HTML: "Esqueceu a senha?"
+        const forgotPasswordLink = [MASCARADO]'button', { name: /esqueceu a senha/i });
+        expect(forgotPasswordLink).toBeTruthy();
+
+        fireEvent.click(forgotPasswordLink);
+        expect(forgotPasswordLink).toBeDefined();
+    });
+});
+
+===== src/app/features/login/login.css =====
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
+.tela-login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  font-family: 'Inter', Arial, sans-serif;
+
+  background:
+    radial-gradient(ellipse 120% 60% at 50% 0%, rgba(95, 216, 234, 0.25), transparent 60%),
+    linear-gradient(160deg, #5fd8ea 0%, #1c92ae 22%, #0f5f7a 42%, #0b1e33 72%, #050d18 100%);
+}
+
+.tela-login::before,
+.tela-login::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgba(255, 255, 255, 0.35),
+    rgba(255, 255, 255, 0.03)
+  );
+  animation: float 14s ease-in-out infinite;
+  pointer-events: none;
+}
+.tela-login::before {
+  width: 60px;
+  height: 60px;
+  top: 10%;
+  left: 8%;
+}
+.tela-login::after {
+  width: 36px;
+  height: 36px;
+  top: 72%;
+  left: 88%;
+  animation-delay: 3s;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateY(-40px) translateX(10px);
+    opacity: 0.9;
+  }
+}
+
+.card-login {
+  position: relative;
+  background: rgba(9, 26, 43, 0.72);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(95, 216, 234, 0.35);
+  padding: 2.5rem 2.25rem 2rem;
+  border-radius: 22px;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.45),
+    0 0 40px rgba(95, 216, 234, 0.08);
+  width: 100%;
+  max-width: 380px;
+  box-sizing: border-box;
+  overflow: hidden;
+  z-index: 2;
+}
+
+.card-login::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, transparent, #f2b942, transparent);
+  opacity: 0.85;
+}
+
+.card-login h1 {
+  text-align: center;
+  margin-bottom: 1.75rem;
+  color: #fff;
+  font-family: 'Baloo 2', sans-serif;
+  font-size: 1.9rem;
+  font-weight: 700;
+}
+
+.card-login h1::before {
+  content: '⚓ ';
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.1rem;
+}
+
+.campo label {
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #9db3c4;
+}
+
+.campo input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.75rem 0.9rem 0.75rem 2.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-family: 'Inter', sans-serif;
+  color: #eaf6fb;
+  background-color: rgba(255, 255, 255, 0.04);
+  background-repeat: no-repeat;
+  background-position: 14px center;
+  background-size: 17px 17px;
+  outline: none;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    background-color 0.2s;
+}
+
+.campo input::placeholder {
+  color: #6d8298;
+}
+
+.campo input:focus {
+  border-color: #5fd8ea;
+  background-color: rgba(95, 216, 234, 0.06);
+  box-shadow: 0 0 0 3px rgba(95, 216, 234, 0.15);
+}
+
+#email {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235fd8ea' stroke-width='2'><rect x='4' y='4' width='16' height='16' rx='2'/><path d='M4 6l8 7 8-7'/></svg>");
+}
+
+#senha {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235fd8ea' stroke-width='2'><rect x='5' y='11' width='14' height='9' rx='2'/><path d='M8 11V7a4 4 0 0 1 8 0v4'/></svg>");
+}
+
+.erro {
+  color: #ef4157;
+  font-size: 0.78rem;
+  margin-top: 0.35rem;
+}
+
+.erro-geral {
+  color: #ef4157;
+  text-align: center;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+}
+
+.link-esqueci {
+  background: transparent;
+  border: none;
+  color: #5fd8ea;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: center;
+  margin: 0.4rem 0 1.2rem;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: none;
+  width: 100%;
+  display: block;
+}
+
+.link-esqueci:hover {
+  text-decoration: underline;
+  transform: none;
+  box-shadow: none;
+  filter: brightness(1.15);
+}
+
+button[type='submit'] {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.85rem;
+  background: linear-gradient(120deg, #1c92ae, #5457e5);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-family: 'Baloo 2', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  box-shadow: 0 10px 26px rgba(84, 87, 229, 0.35);
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s,
+    filter 0.15s;
+}
+
+button[type='submit']:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px rgba(84, 87, 229, 0.5);
+  filter: brightness(1.08);
+}
+
+button[type='submit']:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+button[type='submit']:disabled {
+  background: #3a4a5c;
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.link-registro {
+  text-align: center;
+  margin-top: 1.1rem;
+  font-size: 0.88rem;
+  color: #9db3c4;
+}
+
+.link-registro a {
+  color: #5fd8ea;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.link-registro a:hover {
+  text-decoration: underline;
+}
+
+.link-voltar {
+  display: block;
+  text-align: center;
+  margin-top: 0.9rem;
+  font-size: 0.82rem;
+  color: #9db3c4;
+  text-decoration: none;
+}
+
+.link-voltar:hover {
+  text-decoration: underline;
+  color: #5fd8ea;
+}
+
+.divisor {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 1.1rem 0 0.9rem;
+  color: #9db3c4;
+  font-size: 0.75rem;
+}
+
+.divisor::before,
+.divisor::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.18) 0 6px,
+    transparent 6px 10px
+  );
+}
+
+.btn-google {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.75rem;
+  background: #fff;
+  color: #1f2937;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s,
+    filter 0.15s;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+}
+
+.btn-google:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+  filter: brightness(1.03);
+}
+
+.btn-google:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-google:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.link-voltar,
+.link-voltar-login {
+  display: block;
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  text-align: center;
+  margin-top: 0.9rem;
+  padding: 0;
+  font-size: 0.82rem;
+  font-family: 'Inter', sans-serif;
+  color: #9db3c4;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.link-voltar:hover,
+.link-voltar-login:hover {
+  text-decoration: underline;
+  color: #5fd8ea;
+  transform: none;
+  filter: none;
+  box-shadow: none;
+}
+
+
+===== src/app/features/login/login.html =====
+<div class="tela-login">
+  <form
+    *ngIf="!modoRecuperacao"
+    [formGroup]="loginForm"
+    (ngSubmit)="onSubmit()"
+    class="card-login"
+  >
+    <h1>Entrar</h1>
+
+    <div class="campo">
+      <label for="email">Email</label>
+      <input id="email" type="email" formControlName="email" placeholder="seu@email.com" />
+
+      <span class="erro" *ngIf="loginForm.get('email')?.touched && loginForm.get('email')?.invalid">
+        Digite um email válido
+      </span>
+    </div>
+
+    <div class="campo">
+      <label for="senha">Senha</label>
+      <input id="senha" type="password" formControlName="senha" placeholder="••••••••" />
+
+      <span class="erro" *ngIf="loginForm.get('senha')?.touched && loginForm.get('senha')?.invalid">
+        A senha deve ter no mínimo 6 caracteres
+      </span>
+    </div>
+
+    <button type="button" class="link-esqueci" (click)="abrirRecuperacao()">
+      Esqueceu a senha?
+    </button>
+
+    <p class="erro-geral" *ngIf="mensagemErro">{{ mensagemErro }}</p>
+
+    <button type="submit" [disabled]="carregando">
+      {{ carregando ? 'Entrando...' : 'Entrar' }}
+    </button>
+
+    <div class="divisor">ou</div>
+
+    <button type="button" class="btn-google" (click)="onGoogleLogin()" [disabled]="carregando">
+      <svg width="18" height="18" viewBox="0 0 48 48">
+        <path
+          fill="#FFC107"
+          d="M43.6 20.5H42V20H24v8h11.3C33.9 32.6 29.4 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.4-.4-3.5z"
+        />
+        <path
+          fill="#FF3D00"
+          d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6 29.3 4 24 4c-7.5 0-14 4.1-17.7 10.7z"
+        />
+        <path
+          fill="#4CAF50"
+          d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.5 26.7 36 24 36c-5.3 0-9.8-3.4-11.4-8.1l-6.5 5C9.9 39.8 16.4 44 24 44z"
+        />
+        <path
+          fill="#1976D2"
+          d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.6l6.2 5.2C39.9 36.7 44 31 44 24c0-1.2-.1-2.4-.4-3.5z"
+        />
+      </svg>
+      Entrar com o Google
+    </button>
+
+    <p class="link-registro">Não tem uma conta? <a routerLink="/registro">Criar conta</a></p>
+
+    <a routerLink="/" class="link-voltar">← Voltar para a Home</a>
+  </form>
+
+  <form
+    *ngIf="modoRecuperacao"
+    [formGroup]="recuperarForm"
+    (ngSubmit)="onRecuperarSenha()"
+    class="card-login"
+  >
+    <h1>Recuperar senha</h1>
+    <p class="subtitulo">Informe seu email e enviaremos um link para redefinir sua senha.</p>
+
+    <div class="campo">
+      <label for="emailRecuperacao">Email</label>
+      <input
+        id="emailRecuperacao"
+        type="email"
+        formControlName="email"
+        placeholder="seu@email.com"
+      />
+
+      <span
+        class="erro"
+        *ngIf="recuperarForm.get('email')?.touched && recuperarForm.get('email')?.invalid"
+      >
+        Digite um email válido
+      </span>
+    </div>
+
+    <p class="erro-geral" *ngIf="mensagemErro">{{ mensagemErro }}</p>
+    <p class="sucesso" *ngIf="mensagemSucesso">{{ mensagemSucesso }}</p>
+
+    <button type="submit" [disabled]="carregando">
+      {{ carregando ? 'Enviando...' : 'Enviar link de recuperação' }}
+    </button>
+
+    <button type="button" class="link-voltar-login" (click)="voltarParaLogin()">
+      ← Voltar para o login
+    </button>
+  </form>
+</div>
+
+===== src/app/features/login/login.spec.ts =====
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { vi } from 'vitest';
+import { AuthService } from '../../core/services/auth';
+
+import { Login } from './login';
+
+describe('Login', () => {
+  let component: Login;
+  let fixture: ComponentFixture<Login>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [Login],
+      providers: [
+        provideRouter([]),
+        {
+          provide: AuthService,
+          useValue: {
+            usuarioAtual$: { subscribe: vi.fn() },
+          },
+        },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(Login);
+    component = fixture.componentInstance;
+    await fixture.whenStable();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+});
+
+
+===== src/app/features/login/login.ts =====
+import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
+import { AuthService } from '../../core/services/auth';
+
+@Component({
+  selector: 'app-login',
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  templateUrl: './login.html',
+  styleUrl: './login.css',
+})
+export class Login {
+  loginForm: FormGroup;
+  recuperarForm: FormGroup;
+
+  mensagemErro: string = '';
+  mensagemSucesso: string = '';
+  carregando: boolean = false;
+  modoRecuperacao: boolean = false;
+
+  constructor(
+    private fb: FormBuilder,
+    private authService: AuthService,
+    private router: Router,
+  ) {
+    this.loginForm = this.fb.group({
+      email: ['', [Validators.required, Validators.email]],
+      senha: ['', [Validators.required, Validators.minLength(6)]],
+    });
+
+    this.recuperarForm = this.fb.group({
+      email: ['', [Validators.required, Validators.email]],
+    });
+  }
+
+  onSubmit(): void {
+    if (this.loginForm.invalid) {
+      this.loginForm.markAllAsTouched();
+      return;
+    }
+
+    this.carregando = true;
+    this.mensagemErro = '';
+
+    const { email, senha } = this.loginForm.value;
+
+    this.authService.login(email, senha).subscribe({
+      next: () => {
+        this.carregando = false;
+        this.router.navigate(['/']);
+      },
+      error: (erro) => {
+        this.carregando = false;
+        this.mensagemErro = 'Email ou senha inválidos. Tente novamente.';
+        console.error(erro);
+      },
+    });
+  }
+
+  onGoogleLogin(): void {
+    this.carregando = true;
+    this.mensagemErro = '';
+
+    this.authService.loginComGoogle().subscribe({
+      next: () => {
+        this.carregando = false;
+        this.router.navigate(['/']);
+      },
+      error: (erro) => {
+        this.carregando = false;
+        this.mensagemErro = 'Não foi possível entrar com o Google. Tente novamente.';
+        console.error(erro);
+      },
+    });
+  }
+
+  abrirRecuperacao(): void {
+    this.modoRecuperacao = true;
+    this.mensagemErro = '';
+    this.mensagemSucesso = '';
+    this.recuperarForm.reset();
+  }
+
+  voltarParaLogin(): void {
+    this.modoRecuperacao = false;
+    this.mensagemErro = '';
+    this.mensagemSucesso = '';
+  }
+
+  onRecuperarSenha(): void {
+    if (this.recuperarForm.invalid) {
+      this.recuperarForm.markAllAsTouched();
+      return;
+    }
+
+    this.carregando = true;
+    this.mensagemErro = '';
+    this.mensagemSucesso = '';
+
+    const { email } = this.recuperarForm.value;
+
+    this.authService.recuperarSenha(email).subscribe({
+      next: () => {
+        this.carregando = false;
+        this.mensagemSucesso = 'Link de recuperação enviado com sucesso! Verifique seu email.';
+      },
+      error: (erro) => {
+        this.carregando = false;
+        this.mensagemErro =
+          'Não foi possível enviar o email de recuperação. Verifique o endereço e tente novamente.';
+        console.error(erro);
+      },
+    });
+  }
+}
+
+
+===== src/app/features/login/registro.css =====
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
+.tela-login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  font-family: 'Inter', Arial, sans-serif;
+
+  background:
+    radial-gradient(ellipse 120% 60% at 50% 0%, rgba(95, 216, 234, 0.25), transparent 60%),
+    linear-gradient(160deg, #5fd8ea 0%, #1c92ae 22%, #0f5f7a 42%, #0b1e33 72%, #050d18 100%);
+}
+
+.tela-login::before,
+.tela-login::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgba(255, 255, 255, 0.35),
+    rgba(255, 255, 255, 0.03)
+  );
+  animation: float 14s ease-in-out infinite;
+  pointer-events: none;
+}
+.tela-login::before {
+  width: 60px;
+  height: 60px;
+  top: 10%;
+  left: 8%;
+}
+.tela-login::after {
+  width: 36px;
+  height: 36px;
+  top: 72%;
+  left: 88%;
+  animation-delay: 3s;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateY(-40px) translateX(10px);
+    opacity: 0.9;
+  }
+}
+
+.card-login {
+  position: relative;
+  background: rgba(9, 26, 43, 0.72);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(95, 216, 234, 0.35);
+  padding: 2.5rem 2.25rem 2rem;
+  border-radius: 22px;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.45),
+    0 0 40px rgba(95, 216, 234, 0.08);
+  width: 100%;
+  max-width: 380px;
+  overflow: hidden;
+  z-index: 2;
+}
+
+.card-login::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, transparent, #f2b942, transparent);
+  opacity: 0.85;
+}
+
+.card-login h1 {
+  text-align: center;
+  margin-bottom: 1.75rem;
+  color: #fff;
+  font-family: 'Baloo 2', sans-serif;
+  font-size: 1.9rem;
+  font-weight: 700;
+}
+
+.card-login h1::before {
+  content: '🏝️ ';
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.1rem;
+}
+
+.campo label {
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #9db3c4;
+}
+
+.campo input {
+  padding: 0.75rem 0.9rem 0.75rem 2.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-family: 'Inter', sans-serif;
+  color: #eaf6fb;
+  background-color: rgba(255, 255, 255, 0.04);
+  background-repeat: no-repeat;
+  background-position: 14px center;
+  background-size: 17px 17px;
+  outline: none;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    background-color 0.2s;
+}
+
+.campo input::placeholder {
+  color: #6d8298;
+}
+
+.campo input:focus {
+  border-color: #5fd8ea;
+  background-color: rgba(95, 216, 234, 0.06);
+  box-shadow: 0 0 0 3px rgba(95, 216, 234, 0.15);
+}
+
+#email {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235fd8ea' stroke-width='2'><rect x='4' y='4' width='16' height='16' rx='2'/><path d='M4 6l8 7 8-7'/></svg>");
+}
+
+#senha,
+#confirmarSenha {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235fd8ea' stroke-width='2'><rect x='5' y='11' width='14' height='9' rx='2'/><path d='M8 11V7a4 4 0 0 1 8 0v4'/></svg>");
+}
+
+.erro {
+  color: #ef4157;
+  font-size: 0.78rem;
+  margin-top: 0.35rem;
+}
+
+.erro-geral {
+  color: #ef4157;
+  text-align: center;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+}
+
+button {
+  width: 100%;
+  padding: 0.85rem;
+  background: linear-gradient(120deg, #1c92ae, #5457e5);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-family: 'Baloo 2', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  box-shadow: 0 10px 26px rgba(84, 87, 229, 0.35);
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s,
+    filter 0.15s;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px rgba(84, 87, 229, 0.5);
+  filter: brightness(1.08);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+button:disabled {
+  background: #3a4a5c;
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.link-login {
+  text-align: center;
+  margin-top: 1.1rem;
+  font-size: 0.88rem;
+  color: #9db3c4;
+}
+
+.link-login a {
+  color: #5fd8ea;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.link-login a:hover {
+  text-decoration: underline;
+}
+
+.link-voltar {
+  display: block;
+  text-align: center;
+  margin-top: 0.9rem;
+  font-size: 0.82rem;
+  color: #9db3c4;
+  text-decoration: none;
+}
+
+.link-voltar:hover {
+  text-decoration: underline;
+  color: #5fd8ea;
+}
+
+
+===== src/app/features/login/registro.html =====
+<div class="tela-login">
+  <form [formGroup]="registroForm" (ngSubmit)="onSubmit()" class="card-login">
+    <h1>Criar conta</h1>
+
+    <div class="campo">
+      <label for="nome">Nome de usuário</label>
+      <input
+        id="nome"
+        type="text"
+        formControlName="nome"
+        placeholder="Como você quer ser chamado?"
+      />
+
+      <span
+        class="erro"
+        *ngIf="registroForm.get('nome')?.touched && registroForm.get('nome')?.invalid"
+      >
+        O nome precisa ter no mínimo 3 caracteres
+      </span>
+    </div>
+
+    <div class="campo">
+      <label for="email">Email</label>
+      <input id="email" type="email" formControlName="email" placeholder="seu@email.com" />
+
+      <span
+        class="erro"
+        *ngIf="registroForm.get('email')?.touched && registroForm.get('email')?.invalid"
+      >
+        Digite um email válido
+      </span>
+    </div>
+
+    <div class="campo">
+      <label for="senha">Senha</label>
+      <input id="senha" type="password" formControlName="senha" placeholder="Mínimo 6 caracteres" />
+
+      <span
+        class="erro"
+        *ngIf="registroForm.get('senha')?.touched && registroForm.get('senha')?.invalid"
+      >
+        A senha precisa ter no mínimo 6 caracteres
+      </span>
+    </div>
+
+    <div class="campo">
+      <label for="confirmarSenha">Confirmar senha</label>
+      <input
+        id="confirmarSenha"
+        type="password"
+        formControlName="confirmarSenha"
+        placeholder="Repita a senha"
+      />
+
+      <span
+        class="erro"
+        *ngIf="
+          registroForm.get('confirmarSenha')?.touched && registroForm.errors?.['senhasDiferentes']
+        "
+      >
+        As senhas não coincidem
+      </span>
+    </div>
+
+    <p class="erro-geral" *ngIf="mensagemErro">{{ mensagemErro }}</p>
+
+    <button type="submit" [disabled]="carregando">
+      {{ carregando ? 'Criando conta...' : 'Criar conta' }}
+    </button>
+
+    <p class="link-login">Já tem uma conta? <a routerLink="/login">Entrar</a></p>
+
+    <a routerLink="/" class="link-voltar">← Voltar para a Home</a>
+  </form>
+</div>
+
+
+===== src/app/features/login/registro.ts =====
+import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import {
+  FormBuilder,
+  FormGroup,
+  Validators,
+  ReactiveFormsModule,
+  AbstractControl,
+  ValidationErrors,
+} from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
+import { AuthService } from '../../core/services/auth';
+
+@Component({
+  selector: 'app-registro',
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  templateUrl: './registro.html',
+  styleUrl: './registro.css',
+})
+export class Registro {
+  registroForm: FormGroup;
+  mensagemErro: string = '';
+  carregando: boolean = false;
+
+  constructor(
+    private fb: FormBuilder,
+    private authService: AuthService,
+    private router: Router,
+  ) {
+    this.registroForm = this.fb.group(
+      {
+        nome: ['', [Validators.required, Validators.minLength(3)]],
+        email: ['', [Validators.required, Validators.email]],
+        senha: ['', [Validators.required, Validators.minLength(6)]],
+        confirmarSenha: ['', [Validators.required]],
+      },
+      { validators: this.senhasIguaisValidator },
+    );
+  }
+
+  senhasIguaisValidator(grupo: AbstractControl): ValidationErrors | null {
+    const senha = [MASCARADO]'senha')?.value;
+    const confirmarSenha = [MASCARADO]'confirmarSenha')?.value;
+    return senha === confirmarSenha ? null : { senhasDiferentes: true };
+  }
+
+  onSubmit(): void {
+    if (this.registroForm.invalid) {
+      this.registroForm.markAllAsTouched();
+      return;
+    }
+
+    this.carregando = true;
+    this.mensagemErro = '';
+
+    const { nome, email, senha } = this.registroForm.value;
+
+    this.authService.registrar(email, senha, nome).subscribe({
+      next: () => {
+        this.carregando = false;
+        this.router.navigate(['/']);
+      },
+      error: (erro) => {
+        this.carregando = false;
+        this.mensagemErro = this.traduzirErro(erro.code);
+        console.error(erro);
+      },
+    });
+  }
+
+  private traduzirErro(codigo: string): string {
+    switch (codigo) {
+      case 'auth/email-already-in-use':
+        return 'Esse email já está cadastrado.';
+      case 'auth/invalid-email':
+        return 'Email inválido.';
+      case 'auth/weak-password':
+        return 'A senha é muito fraca.';
+      default:
+        return 'Erro ao criar conta. Tente novamente.';
+    }
+  }
+}
+
+
+===== src/app/features/perfil/perfil.css =====
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
+.tela-perfil {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  padding-top: 120px;
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+  font-family: 'Inter', Arial, sans-serif;
+
+  background:
+    radial-gradient(ellipse 120% 60% at 50% 0%, rgba(95, 216, 234, 0.25), transparent 60%),
+    linear-gradient(160deg, #5fd8ea 0%, #1c92ae 22%, #0f5f7a 42%, #0b1e33 72%, #050d18 100%);
+}
+
+.tela-perfil::before,
+.tela-perfil::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgba(255, 255, 255, 0.35),
+    rgba(255, 255, 255, 0.03)
+  );
+  animation: float 14s ease-in-out infinite;
+  pointer-events: none;
+}
+.tela-perfil::before {
+  width: 60px;
+  height: 60px;
+  top: 10%;
+  left: 8%;
+}
+.tela-perfil::after {
+  width: 36px;
+  height: 36px;
+  top: 72%;
+  left: 88%;
+  animation-delay: 3s;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateY(-40px) translateX(10px);
+    opacity: 0.9;
+  }
+}
+
+.card-perfil {
+  position: relative;
+  background: rgba(9, 26, 43, 0.72);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(95, 216, 234, 0.35);
+  padding: 2.5rem 2.25rem 2rem;
+  border-radius: 22px;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.45),
+    0 0 40px rgba(95, 216, 234, 0.08);
+  width: 100%;
+  max-width: 380px;
+  overflow: hidden;
+  z-index: 2;
+  text-align: center;
+}
+
+.card-perfil::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, transparent, #f2b942, transparent);
+  opacity: 0.85;
+}
+
+.avatar-grande-container {
+  margin-bottom: 0.75rem;
+}
+
+.avatar-grande {
+  font-size: 4.2rem;
+  color: #5fd8ea;
+  filter: drop-shadow(0 0 12px rgba(95, 216, 234, 0.4));
+}
+
+.card-perfil h1 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  color: #fff;
+  font-family: 'Baloo 2', sans-serif;
+  font-size: 1.9rem;
+  font-weight: 700;
+}
+
+.info-fixa {
+  text-align: left;
+  margin-bottom: 1.4rem;
+  padding-bottom: 1.1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.info-fixa label {
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #9db3c4;
+}
+
+.info-fixa p {
+  margin: 0.35rem 0 0;
+  font-size: 0.95rem;
+  color: #eaf6fb;
+  font-weight: 600;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  margin-bottom: 1.1rem;
+}
+
+.campo label {
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #9db3c4;
+}
+
+.campo input {
+  padding: 0.75rem 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-family: 'Inter', sans-serif;
+  color: #eaf6fb;
+  background-color: rgba(255, 255, 255, 0.04);
+  outline: none;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    background-color 0.2s;
+}
+
+.campo input::placeholder {
+  color: #6d8298;
+}
+
+.campo input:focus {
+  border-color: #5fd8ea;
+  background-color: rgba(95, 216, 234, 0.06);
+  box-shadow: 0 0 0 3px rgba(95, 216, 234, 0.15);
+}
+
+.erro {
+  color: #ef4157;
+  font-size: 0.78rem;
+  margin-top: 0.35rem;
+}
+
+.erro-geral {
+  color: #ef4157;
+  text-align: center;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+}
+
+.mensagem-sucesso {
+  color: #4ade80;
+  text-align: center;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+button {
+  width: 100%;
+  padding: 0.85rem;
+  background: linear-gradient(120deg, #1c92ae, #5457e5);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-family: 'Baloo 2', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  box-shadow: 0 10px 26px rgba(84, 87, 229, 0.35);
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s,
+    filter 0.15s;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px rgba(84, 87, 229, 0.5);
+  filter: brightness(1.08);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+button:disabled {
+  background: #3a4a5c;
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.link-voltar {
+  display: block;
+  text-align: center;
+  margin-top: 1.1rem;
+  font-size: 0.82rem;
+  color: #9db3c4;
+  text-decoration: none;
+}
+
+.link-voltar:hover {
+  text-decoration: underline;
+  color: #5fd8ea;
+}
+
+
+===== src/app/features/perfil/perfil.html =====
+<div class="tela-perfil">
+  <div class="card-perfil">
+
+    <div class="avatar-grande-container">
+      <i class="fa-solid fa-circle-user avatar-grande"></i>
+    </div>
+
+    <h1>Meu Perfil</h1>
+
+    <div class="info-fixa">
+      <label>Email</label>
+      <p>{{ authFacade.usuarioAtual()?.email }}</p>
+    </div>
+
+    <form [formGroup]="perfilForm" (ngSubmit)="salvar()">
+      <div class="campo">
+        <label for="nomeUsuario">Nome de usuário</label>
+        <input
+          id="nomeUsuario"
+          type="text"
+          formControlName="nomeUsuario"
+          placeholder="Como você quer ser chamado?"
+        />
+
+        <span
+          class="erro"
+          *ngIf="perfilForm.get('nomeUsuario')?.touched && perfilForm.get('nomeUsuario')?.invalid"
+        >
+          O nome de usuário precisa ter no mínimo 3 caracteres
+        </span>
+      </div>
+
+      <p class="mensagem-sucesso" *ngIf="mensagemSucesso()">{{ mensagemSucesso() }}</p>
+      <p class="erro-geral" *ngIf="mensagemErro()">{{ mensagemErro() }}</p>
+
+      <button type="submit" [disabled]="salvando()">
+        {{ salvando() ? 'Salvando...' : 'Salvar alterações' }}
+      </button>
+    </form>
+
+    <a routerLink="/" class="link-voltar">← Voltar para a Home</a>
+  </div>
+</div>
+
+===== src/app/features/perfil/perfil.spec.ts =====
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { Perfil } from './perfil';
+
+describe('Perfil', () => {
+  let component: Perfil;
+  let fixture: ComponentFixture<Perfil>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [Perfil],
+      providers: [provideRouter([])],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(Perfil);
+    component = fixture.componentInstance;
+    await fixture.whenStable();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+});
+
+
+===== src/app/features/perfil/perfil.ts =====
+import { Component, inject, effect, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import { AuthFacade } from '../../core/facades/auth.facade';
+import { finalize } from 'rxjs';
+
+@Component({
+  selector: 'app-perfil',
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  templateUrl: './perfil.html',
+  styleUrl: './perfil.css',
+})
+export class Perfil {
+  authFacade = inject(AuthFacade);
+  fb = inject(FormBuilder);
+
+  perfilForm: FormGroup;
+
+  mensagemSucesso = signal('');
+  mensagemErro = signal('');
+  salvando = signal(false);
+
+  constructor() {
+    this.perfilForm = this.fb.group({
+      nomeUsuario: ['', [Validators.required, Validators.minLength(3)]],
+    });
+
+    effect(() => {
+      const usuario = this.authFacade.usuarioAtual();
+      if (usuario) {
+        this.perfilForm.patchValue({
+          nomeUsuario: usuario.displayName || '',
+        });
+      }
+    });
+  }
+
+  salvar(): void {
+    if (this.perfilForm.invalid) {
+      this.perfilForm.markAllAsTouched();
+      return;
+    }
+
+    this.salvando.set(true);
+    this.mensagemSucesso.set('');
+    this.mensagemErro.set('');
+
+    const { nomeUsuario } = this.perfilForm.value;
+
+    this.authFacade
+      .atualizarNomeUsuario(nomeUsuario)
+      .pipe(finalize(() => this.salvando.set(false)))
+      .subscribe({
+        next: () => {
+          this.mensagemSucesso.set('Nome de usuário atualizado com sucesso!');
+        },
+        error: (erro) => {
+          console.error('Erro ao atualizar nome:', erro);
+          this.mensagemErro.set('Não foi possível salvar. Tente novamente.');
+        },
+      });
+  }
+}
+
+
+===== src/app/features/produtos/a-plague-tale/a-plague-tale.css =====
+/* --- CONTAINER GERAL DA PÁGINA --- */
+.pagina-detalhes {
+  margin-top: 80px;
+  background: transparent; 
+  color: #ffffff;
+  padding: 40px 40px 24px 40px;
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif;
+  box-sizing: border-box;
+}
+
+/* --- MENSAGEM FLUTUANTE (TOAST) --- */
+.toast-notificacao {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #00f0ff;
+  color: #0a1626;
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 0.95rem;
+  box-shadow: 0 8px 24px rgba(0, 240, 255, 0.4);
+  z-index: 9999;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.breadcrumb {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 20px;
+}
+
+.breadcrumb-link {
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.breadcrumb-link:hover {
+  color: #72ecff;
+  text-decoration: underline;
+}
+
+.grid-principal {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+.secao-midia {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.container-imagem-destaque {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(11, 28, 48, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+.img-destaque {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.badge-desconto {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 10;
+  background: #0088ff;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 4px 10px;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.badge-classificacao {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  background: #000000;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 4px 10px;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.btn-seta {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.6);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  cursor: pointer;
+  z-index: 5;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-seta:hover {
+  background: #0088ff;
+  border-color: #0088ff;
+}
+
+.btn-prev { left: 12px; }
+.btn-next { right: 12px; }
+
+.fila-miniaturas {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 12px;
+  margin-top: 14px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(79, 195, 232, 0.4) transparent;
+}
+
+.fila-miniaturas::-webkit-scrollbar {
+  height: 6px;
+  background: transparent;
+}
+
+.fila-miniaturas::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.fila-miniaturas::-webkit-scrollbar-thumb {
+  background: rgba(79, 195, 232, 0.3);
+  border-radius: 10px;
+  transition: background 0.2s ease;
+}
+
+.fila-miniaturas::-webkit-scrollbar-thumb:hover {
+  background: #4fc3e8;
+}
+
+.thumb-item {
+  flex: 0 0 140px;
+  height: 80px;
+  background: none;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  padding: 0;
+  cursor: pointer;
+  overflow: hidden;
+  opacity: 0.55;
+  transition: all 0.2s;
+}
+
+.thumb-item:hover {
+  opacity: 0.85;
+}
+
+.thumb-item.ativo {
+  border-color: #00d2ff;
+  opacity: 1;
+  box-shadow: 0 0 12px rgba(0, 210, 255, 0.6);
+}
+
+.thumb-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.secao-info {
+  width: 100%;
+}
+
+.titulo-jogo {
+  font-size: 2.2rem;
+  font-weight: 800;
+  margin: 0 0 8px 0;
+  color: #ffffff;
+}
+
+.subtitulos {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}
+
+.categoria-tag {
+  color: #72ecff;
+}
+
+.avaliacao-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.estrelas {
+  color: #f59e0b;
+}
+
+.destaques-lista {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.destaques-lista li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0;
+}
+
+.card-compra, 
+.tabela-fatos, 
+.secao-detalhada, 
+.secao-avaliacoes {
+  background: rgba(11, 28, 48, 0.75);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+}
+
+.card-compra {
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.precos-linha {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.preco-original {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-decoration: line-through;
+}
+
+.preco-promo {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #72ecff;
+}
+
+.acoes-botoes {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+
+.btn-adicionar {
+  flex: 1;
+  background: #0088ff;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-adicionar:hover {
+  background: #0066cc;
+  transform: translateY(-2px);
+}
+
+.btn-favorito {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.55);
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s, transform 0.2s;
+}
+
+.btn-favorito:hover {
+  transform: scale(1.1);
+}
+
+.icon-heart {
+  width: 24px;
+  height: 24px;
+}
+
+.btn-favorito.favoritado {
+  color: #ff4757;
+}
+
+.btn-comprar {
+  width: 100%;
+  background: transparent;
+  border: 1px solid #72ecff;
+  color: #72ecff;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-comprar:hover {
+  background: rgba(114, 236, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.compra-segura {
+  text-align: center;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 10px;
+}
+
+.tabela-fatos {
+  padding: 16px;
+}
+
+.fato-linha {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.fato-linha:last-child {
+  border-bottom: none;
+}
+
+.fato-linha span {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.fato-linha strong {
+  color: #ffffff;
+}
+
+.secao-detalhada, 
+.secao-avaliacoes {
+  padding: 28px;
+  margin-top: 32px;
+}
+
+.secao-detalhada h2, 
+.secao-avaliacoes h2 {
+  font-size: 1.1rem;
+  margin-bottom: 14px;
+  color: #ffffff;
+}
+
+.descricao-paragrafo {
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.6;
+}
+
+.secao-avaliacoes {
+  margin-bottom: 40px;
+}
+
+.grid-avaliacoes {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.resumo-avaliacoes-card {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+}
+
+.nota-gigante {
+  font-size: 3rem;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.total-votos {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+  display: block;
+  margin-top: 4px;
+  margin-bottom: 20px;
+}
+
+.barras-avaliacao {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+  text-align: left;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.linha-barra {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.linha-barra span:first-child {
+  width: 55px;
+}
+
+.barra-fundo {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.barra-progresso {
+  height: 100%;
+  background: #0088ff;
+  border-radius: 3px;
+}
+
+.votos-num {
+  width: 35px;
+  text-align: right;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.btn-escrever-avaliacao {
+  width: 100%;
+  background: transparent;
+  border: 1px solid #0088ff;
+  color: #72ecff;
+  padding: 10px;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-escrever-avaliacao:hover {
+  background: rgba(0, 136, 255, 0.15);
+}
+
+.lista-comentarios {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.comentario-card {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.autor-cabecalho {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.avatar-autor {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #0088ff;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.info-autor {
+  flex: 1;
+}
+
+.info-autor strong {
+  display: block;
+  font-size: 0.9rem;
+  color: #ffffff;
+}
+
+.estrelas-mini {
+  font-size: 0.75rem;
+  color: #f59e0b;
+}
+
+.data-comentario {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.texto-comentario {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.reacoes-comentario {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.btn-reacao {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.btn-reacao:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.btn-reacao.ativo {
+  background: rgba(0, 240, 255, 0.2);
+  border-color: #00f0ff;
+  color: #00f0ff;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-card {
+  background: #0f1e31;
+  border: 1px solid rgba(79, 195, 232, 0.3);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 18px 24px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #00f0ff;
+}
+
+.btn-fechar-modal {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.modal-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.campo-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.campo-grupo label {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.campo-grupo input,
+.campo-grupo textarea {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+.campo-grupo input:focus,
+.campo-grupo textarea:focus {
+  outline: none;
+  border-color: #00f0ff;
+}
+
+.seletor-estrelas-botoes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-estrela-opcao {
+  background: transparent;
+  border: none;
+  font-size: 1.6rem;
+  color: rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  transition: transform 0.15s ease, color 0.15s ease;
+  padding: 0;
+  line-height: 1;
+}
+
+.btn-estrela-opcao:hover,
+.btn-estrela-opcao.selecionado {
+  color: #f59e0b;
+}
+
+.btn-estrela-opcao:hover {
+  transform: scale(1.25);
+}
+
+.texto-nota-selecionada {
+  margin-left: auto;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #72ecff;
+}
+
+.modal-acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.btn-cancelar {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-cancelar:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.btn-enviar {
+  background: #00f0ff;
+  color: #0a1626;
+  border: none;
+  font-weight: 800;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-enviar:hover {
+  opacity: 0.9;
+}
+
+.estado-alternativo {
+  text-align: center;
+  padding: 80px 20px;
+  color: #ffffff;
+  font-size: 1.1rem;
+}
+
+.cabecalho-navegacao {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.cabecalho-navegacao .breadcrumb {
+  margin-bottom: 0;
+}
+
+.btn-voltar {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.icon-pirata {
+  width: 18px;
+  height: 18px;
+  stroke: #ffffff;
+  transition: transform 0.3s ease, stroke 0.2s ease;
+}
+
+.btn-voltar:hover {
+  background: rgba(114, 236, 255, 0.15);
+  border-color: #72ecff;
+  color: #72ecff;
+}
+
+.btn-voltar:hover .icon-pirata {
+  stroke: #72ecff;
+  transform: rotate(-45deg);
+}
+
+/* --- CORES DE CLASSIFICAÇÃO ETÁRIA --- */
+.badge-classificacao.livre { background: #4ade80; color: #06231a; }
+.badge-classificacao.dez   { background: #4fc3e8; color: #06232f; }
+.badge-classificacao.doze  { background: #ffd93d; color: #3a2c00; }
+.badge-classificacao.quatorze { background: #ffb454; color: #3a2200; }
+.badge-classificacao.dezesseis { background: #ff8a3d; color: #3a1800; }
+.badge-classificacao.dezoito { background: #ff5252; color: #ffffff; }
+
+.badge-gratis {
+  background: #4ade80;
+  color: #06231a;
+}
+
+/* ==========================================================================
+   --- REGRAS DE RESPONSIVIDADE (MEDIA QUERIES) ---
+   ========================================================================== */
+
+/* Tablets e notebooks menores (Até 1024px) */
+@media (max-width: 1024px) {
+  .pagina-detalhes {
+    padding: 30px 20px 20px 20px;
+  }
+
+  .grid-principal {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .grid-avaliacoes {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .resumo-avaliacoes-card {
+    max-width: 100%;
+  }
+}
+
+/* Dispositivos Móveis (Até 768px) */
+@media (max-width: 768px) {
+  .pagina-detalhes {
+    margin-top: 60px;
+    padding: 16px;
+  }
+
+  .cabecalho-navegacao {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .titulo-jogo {
+    font-size: 1.6rem;
+  }
+
+  .thumb-item {
+    flex: 0 0 110px;
+    height: 65px;
+  }
+
+  .btn-seta {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+
+  .secao-detalhada, 
+  .secao-avaliacoes {
+    padding: 18px;
+    margin-top: 20px;
+  }
+
+  /* Requisitos de Sistema em uma coluna única */
+  .grid-requisitos {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  .toast-notificacao {
+    bottom: 16px;
+    right: 16px;
+    left: 16px;
+    text-align: center;
+  }
+}
+
+/* Telas Pequenas de Celular (Até 480px) */
+@media (max-width: 480px) {
+  .acoes-botoes {
+    flex-direction: row;
+  }
+
+  .btn-adicionar {
+    font-size: 0.85rem;
+    padding: 10px;
+  }
+
+  .preco-promo {
+    font-size: 1.5rem;
+  }
+
+  .modal-card {
+    max-width: 95%;
+  }
+
+  .modal-body {
+    padding: 16px;
+  }
+
+  .seletor-estrelas-botoes {
+    justify-content: space-between;
+  }
+
+  .btn-estrela-opcao {
+    font-size: 1.3rem;
+  }
+}
+
+===== src/app/features/produtos/a-plague-tale/a-plague-tale.html =====
+<!-- Mensagem Flutuante (Toast) -->
+<div class="toast-notificacao" *ngIf="mensagemToast">
+  {{ mensagemToast }}
+</div>
+
+<div class="pagina-detalhes" *ngIf="jogo; else estadoAlternativo">
+  <!-- Breadcrumb com Botão Voltar -->
+  <div class="cabecalho-navegacao">
+    <button class="btn-voltar" (click)="voltarPagina()">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="icon-pirata"
+      >
+        <circle cx="12" cy="12" r="9"></circle>
+        <circle cx="12" cy="12" r="3"></circle>
+        <line x1="12" y1="1" x2="12" y2="23"></line>
+        <line x1="1" y1="12" x2="23" y2="12"></line>
+        <line x1="4.22" y1="4.22" x2="19.78" y2="19.78"></line>
+        <line x1="4.22" y1="19.78" x2="19.78" y2="4.22"></line>
+      </svg>
+      Voltar
+    </button>
+    <div class="breadcrumb">
+      <span class="breadcrumb-link" (click)="irParaHome()">HOME</span> &gt;
+      <span class="breadcrumb-link" (click)="irParaJogos()">JOGOS</span> &gt;
+      <strong>{{ jogo.nome }}</strong>
+    </div>
+  </div>
+
+  <!-- GRID PRINCIPAL -->
+  <div class="grid-principal">
+    <!-- Mídia com Carrossel Nativo -->
+    <div class="secao-midia">
+      <div class="container-imagem-destaque">
+        <span class="badge-desconto">-35%</span>
+        <span class="badge-classificacao">{{ jogo.classificacaoEtaria }}</span>
+
+        <!-- Botões de Setas -->
+        <button
+          class="btn-seta btn-prev"
+          (click)="fotoAnterior()"
+          *ngIf="galeriaImagens.length > 1"
+        >
+          ❮
+        </button>
+
+        <!-- Imagem Principal -->
+        <img
+          *ngIf="galeriaImagens.length > 0"
+          [src]="galeriaImagens[indiceAtivo]"
+          [alt]="jogo.nome"
+          class="img-destaque"
+        />
+
+        <button class="btn-seta btn-next" (click)="proximaFoto()" *ngIf="galeriaImagens.length > 1">
+          ❯
+        </button>
+      </div>
+
+      <!-- Fila de Miniaturas -->
+      <div class="fila-miniaturas" *ngIf="galeriaImagens.length > 0">
+        <button
+          *ngFor="let img of galeriaImagens; let i = index"
+          class="thumb-item"
+          [class.ativo]="i === indiceAtivo"
+          (click)="selecionarIndice(i)"
+        >
+          <img [src]="img" alt="Thumbnail gameplay" />
+        </button>
+      </div>
+    </div>
+
+    <!-- Painel Lateral de Informações -->
+    <div class="secao-info">
+      <h1 class="titulo-jogo">{{ jogo.nome }}</h1>
+
+      <div class="subtitulos">
+        <span>{{ jogo.desenvolvedoras }}</span> • <span>{{ jogo.plataformas }}</span> •
+        <span class="categoria-tag">Aventura, Ação, Steahlt</span>
+      </div>
+
+      <div class="avaliacao-container">
+        <div class="estrelas">★★★★★</div>
+        <span class="nota-numero">4.8</span>
+        <span class="total-avaliacoes">(1.240 avaliações)</span>
+      </div>
+
+      <ul class="destaques-lista">
+        <li>
+          <i class="fas fa-shield-alt"></i> <strong>Sobrevivência Sombria:</strong> Fuja da Inquisição e de hordas impiedosas de ratos.
+        </li>
+        <li>
+          <i class="fas fa-users"></i> <strong>Laço Familiar:</strong> Acompanhe a jornada emocionante de Amicia e seu irmão Hugo.
+        </li>
+        <li>
+          <i class="fas fa-puzzle-piece"></i> <strong>Quebra-Cabeças:</strong> Use a luz, fundas e furtividade para superar perigos.
+        </li>
+      </ul>
+
+      <div class="card-compra">
+        <div class="precos-linha">
+   
+          <span class="preco-original">R$ 229,00</span>
+          <span class="preco-promo">R$ 91,60</span>
+        </div>
+
+        <div class="acoes-botoes">
+          <button class="btn-adicionar" (click)="adicionarAoCarrinho()">
+            <i class="fas fa-shopping-cart"></i> Adicionar ao carrinho
+          </button>
+
+          <button
+            class="btn-favorito"
+            [class.favoritado]="favorito"
+            (click)="toggleFavorito()"
+            type="button"
+            title="Favoritar"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              [attr.fill]="favorito ? '#ff4757' : 'none'"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="icon-heart"
+            >
+              <path
+                d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+              ></path>
+            </svg>
+          </button>
+        </div>
+
+        <button class="btn-comprar" (click)="comprarAgora()">Comprar agora</button>
+        <div class="compra-segura"><i class="fas fa-lock"></i> Compra 100% segura</div>
+      </div>
+
+      <!-- Fatos do Jogo -->
+      <div class="tabela-fatos">
+        <div class="fato-linha">
+          <span>Plataforma:</span> <strong>{{ jogo.plataformas }}</strong>
+        </div>
+        <div class="fato-linha"><span>Gênero:</span> <strong>Aventura, Ação</strong></div>
+        <div class="fato-linha">
+          <span>Lançamento:</span> <strong>{{ jogo.dataLancamento }}</strong>
+        </div>
+        <div class="fato-linha">
+          <span>Desenvolvedor:</span> <strong>{{ jogo.desenvolvedoras }}</strong>
+        </div>
+        <div class="fato-linha">
+          <span>Distribuidora:</span> <strong>{{ jogo.distribuidoras }}</strong>
+        </div>
+        <div class="fato-linha">
+          <span>Idioma:</span> <strong>Português (Brasil) e mais</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEÇÃO SOBRE O JOGO -->
+  <div class="secao-detalhada">
+    <h2>SOBRE O JOGO</h2>
+    <p class="descricao-paragrafo">{{ jogo.descricao }}</p>
+  </div>
+
+  <!-- SEÇÃO REQUISITOS DE SISTEMA -->
+  <div class="secao-detalhada secao-requisitos">
+    <h2>REQUISITOS DE SISTEMA (PC)</h2>
+    <div class="grid-requisitos" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;">
+      <div class="req-coluna">
+        <h3 style="color: #4feaf5; font-size: 0.95rem; margin-bottom: 10px;">Mínimos:</h3>
+        <ul style="list-style: none; padding: 0; font-size: 0.85rem; color: rgba(255,255,255,0.8); display: flex; flex-direction: column; gap: 6px;">
+          <li><strong>Sistema Operacional:</strong> Windows 10 (64-bit)</li>
+          <li><strong>Processador:</strong> Intel Core i3-2120 (3.3 GHz) / AMD FX-4100 (3.6 GHz)</li>
+          <li><strong>Memória:</strong> 8 GB de RAM</li>
+          <li><strong>Placa de Vídeo:</strong> NVIDIA GeForce GTX 660 / AMD Radeon HD 7870</li>
+          <li><strong>Armazenamento:</strong> 50 GB de espaço disponível</li>
+        </ul>
+      </div>
+      <div class="req-coluna">
+        <h3 style="color: #4feaf5; font-size: 0.95rem; margin-bottom: 10px;">Recomendados:</h3>
+        <ul style="list-style: none; padding: 0; font-size: 0.85rem; color: rgba(255,255,255,0.8); display: flex; flex-direction: column; gap: 6px;">
+          <li><strong>Sistema Operacional:</strong> Windows 10/11 (64-bit)</li>
+          <li><strong>Processador:</strong> Intel Core i5-4690 (3.5 GHz) / AMD FX-8300 (3.3 GHz)</li>
+          <li><strong>Memória:</strong> 16 GB de RAM</li>
+          <li><strong>Placa de Vídeo:</strong> NVIDIA GeForce GTX 970 / AMD Radeon RX 480</li>
+          <li><strong>Armazenamento:</strong> 50 GB (SSD recomendado)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Escrever Avaliação -->
+  <div class="modal-overlay" *ngIf="exibirModalAvaliacao">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>ESCREVER AVALIAÇÃO</h3>
+        <button class="btn-fechar-modal" (click)="fecharModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="campo-grupo">
+          <label>Seu Nome ou GamerTag</label>
+          <input type="text" [(ngModel)]="novoNome" placeholder="Ex: Amicia_Ruler" />
+        </div>
+
+        <div class="campo-grupo">
+          <label>Sua Nota</label>
+          <div class="seletor-estrelas-botoes">
+            <button
+              type="button"
+              *ngFor="let nota of [1, 2, 3, 4, 5]"
+              class="btn-estrela-opcao"
+              [class.selecionado]="novaNota >= nota"
+              (click)="novaNota = nota"
+            >
+              ★
+            </button>
+            <span class="texto-nota-selecionada">{{ novaNota }} de 5</span>
+          </div>
+        </div>
+
+        <div class="campo-grupo">
+          <label>Sua Opinião</label>
+          <textarea
+            [(ngModel)]="novoTexto"
+            rows="4"
+            placeholder="O que você achou do jogo?"
+          ></textarea>
+        </div>
+
+        <div class="modal-acoes">
+          <button class="btn-cancelar" (click)="fecharModal()">Cancelar</button>
+          <button class="btn-enviar" (click)="enviarAvaliacao()">Publicar Avaliação</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEÇÃO AVALIAÇÕES DOS JOGADORES -->
+  <div class="secao-avaliacoes" *ngIf="jogo">
+    <h2>AVALIAÇÕES DOS JOGADORES</h2>
+
+    <div class="grid-avaliacoes">
+      <div class="resumo-avaliacoes-card">
+        <div class="nota-gigante">4.8</div>
+        <div class="estrelas">★★★★★</div>
+        <span class="total-votos">{{ 1240 + listaComentarios.length }} avaliações</span>
+
+        <div class="barras-avaliacao">
+          <div class="linha-barra">
+            <span>5 estrelas</span>
+            <div class="barra-fundo"><div class="barra-progresso" style="width: 82%"></div></div>
+            <span class="votos-num">1.015</span>
+          </div>
+          <div class="linha-barra">
+            <span>4 estrelas</span>
+            <div class="barra-fundo"><div class="barra-progresso" style="width: 14%"></div></div>
+            <span class="votos-num">175</span>
+          </div>
+          <div class="linha-barra">
+            <span>3 estrelas</span>
+            <div class="barra-fundo"><div class="barra-progresso" style="width: 3%"></div></div>
+            <span class="votos-num">35</span>
+          </div>
+          <div class="linha-barra">
+            <span>2 estrelas</span>
+            <div class="barra-fundo"><div class="barra-progresso" style="width: 1%"></div></div>
+            <span class="votos-num">10</span>
+          </div>
+          <div class="linha-barra">
+            <span>1 estrela</span>
+            <div class="barra-fundo"><div class="barra-progresso" style="width: 0.5%"></div></div>
+            <span class="votos-num">5</span>
+          </div>
+        </div>
+
+        <button class="btn-escrever-avaliacao" (click)="abrirModal()">Escrever avaliação</button>
+      </div>
+
+      <div class="lista-comentarios">
+        <div class="comentario-card" *ngFor="let c of listaComentarios">
+          <div class="autor-cabecalho">
+            <div class="avatar-autor">{{ c.avatar }}</div>
+            <div class="info-autor">
+              <strong>{{ c.autor }}</strong>
+              <div class="estrelas-mini">{{ getEstrelasTexto(c.estrelas) }}</div>
+            </div>
+            <span class="data-comentario">{{ c.data }}</span>
+          </div>
+
+          <p class="texto-comentario">{{ c.texto }}</p>
+
+          <div class="reacoes-comentario">
+            <span>Isso foi útil?</span>
+            <button class="btn-reacao" [class.ativo]="c.votouLike" (click)="darLike(c)">
+              👍 {{ c.likes }}
+            </button>
+            <button class="btn-reacao" [class.ativo]="c.votouDislike" (click)="darDislike(c)">
+              👎 {{ c.dislikes }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Estado de Carregamento / Erro -->
+<ng-template #estadoAlternativo>
+  <div class="estado-alternativo">
+    <p *ngIf="carregando">Carregando informações do jogo...</p>
+    <p *ngIf="!carregando && erro">
+      Não foi possível carregar os dados do jogo agora. Tente novamente em instantes.
+    </p>
+  </div>
+</ng-template>
+
+===== src/app/features/produtos/a-plague-tale/a-plague-tale.spec.ts =====
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+
+import { APlagueTale } from './a-plague-tale';
+
+describe('APlagueTale', () => {
+  let component: APlagueTale;
+  let fixture: ComponentFixture<APlagueTale>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [APlagueTale],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(APlagueTale);
+    component = fixture.componentInstance;
+    await fixture.whenStable();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+});
+
+
+===== src/app/features/produtos/a-plague-tale/a-plague-tale.ts =====
+import { Component, OnInit, inject, ChangeDetectorRef, afterNextRender } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { Location } from '@angular/common';
+import { RawgService,DetalhesJogo } from '../../../core/services/rawg.service';
+import { CarrinhoFacade } from '../../../core/facades/carrinho.facade';
+import { FavoritosService } from '../../../core/services/favoritos.service';
+
+export interface Comentario {
+  id: number;
+  autor: string;
+  avatar: string;
+  estrelas: number;
+  texto: string;
+  data: string;
+  likes: number;
+  dislikes: number;
+  votouLike?: boolean;
+  votouDislike?: boolean;
+}
+
+const CHAVE_CACHE = 'aplague_dados_completos';
+const CHAVE_AVALIACOES = 'aplague_avaliacoes_lista';
+
+@Component({
+  selector: 'app-a-plague-tale',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './a-plague-tale.html',
+  styleUrl: './a-plague-tale.css',
+})
+export class APlagueTale implements OnInit {
+  jogo: DetalhesJogo | null = null;
+  carregando: boolean = true;
+  erro: boolean = false;
+
+  galeriaImagens: string[] = [];
+  indiceAtivo: number = 0;
+  favorito: boolean = false;
+  mensagemToast: string | null = null;
+
+  exibirModalAvaliacao: boolean = false;
+  novoNome: string = '';
+  novoTexto: string = '';
+  novaNota: number = 5;
+
+  private location = inject(Location);
+
+  voltarPagina(): void {
+    this.location.back();
+  }
+
+  listaComentarios: Comentario[] = [
+    {
+      id: 1,
+      autor: 'AmiciaDeRuns',
+      avatar: 'A',
+      estrelas: 5,
+      texto: 'Uma obra-prima narrativa! A atmosfera da França medieval sombria combinada com os ratos é assustadoramente linda.',
+      data: '21/08/2026',
+      likes: 95,
+      dislikes: 1,
+    },
+    {
+      id: 2,
+      autor: 'HugoBrave',
+      avatar: 'H',
+      estrelas: 5,
+      texto: 'História muito emocionante que prende do começo ao fim. Trilha sonora espetacular.',
+      data: '19/08/2026',
+      likes: 62,
+      dislikes: 2,
+    },
+  ];
+
+  readonly ID_PRODUTO = '7';
+  readonly precoJogo = 103.93;
+  readonly precoOriginalFormatado = 'R$ 159,90';
+  readonly precoFormatado = 'R$ 103,93';
+
+  private cdr = inject(ChangeDetectorRef);
+  private rawgService = inject(RawgService);
+  private router = inject(Router);
+  private carrinhoFacade = inject(CarrinhoFacade);
+  private favoritosService = inject(FavoritosService);
+
+  private jogoSlug = 'a-plague-tale-innocence';
+  private steamAppId = '752590';
+
+  constructor() {
+    this.carregarDoCache();
+
+    afterNextRender(() => {
+      this.favorito = this.favoritosService.ehFavorito(this.ID_PRODUTO);
+      this.carregarAvaliacoes();
+
+      if (!this.jogo || this.galeriaImagens.length === 0) {
+        this.carregarDadosDoJogo();
+      } else {
+        this.carregando = false;
+      }
+    });
+  }
+
+  ngOnInit(): void {}
+
+  carregarAvaliacoes(): void {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const salvas = localStorage.getItem(CHAVE_AVALIACOES);
+        if (salvas) {
+          this.listaComentarios = JSON.parse(salvas);
+        }
+      }
+    } catch {}
+  }
+
+  salvarAvaliacoes(): void {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(CHAVE_AVALIACOES, JSON.stringify(this.listaComentarios));
+      }
+    } catch {}
+  }
+
+  abrirModal(): void {
+    this.exibirModalAvaliacao = true;
+  }
+
+  fecharModal(): void {
+    this.exibirModalAvaliacao = false;
+    this.novoNome = '';
+    this.novoTexto = '';
+    this.novaNota = 5;
+  }
+
+  enviarAvaliacao(): void {
+    if (!this.novoNome.trim() || !this.novoTexto.trim()) {
+      this.exibirToast('⚠️ Preencha seu nome e comentário!');
+      return;
+    }
+
+    const hoje = new Date();
+    const dataFormatada = hoje.toLocaleDateString('pt-BR');
+
+    const novaAvaliacao: Comentario = {
+      id: Date.now(),
+      autor: this.novoNome.trim(),
+      avatar: this.novoNome.trim().charAt(0).toUpperCase(),
+      estrelas: Number(this.novaNota),
+      texto: this.novoTexto.trim(),
+      data: dataFormatada,
+      likes: 0,
+      dislikes: 0,
+    };
+
+    this.listaComentarios.unshift(novaAvaliacao);
+    this.salvarAvaliacoes();
+    this.fecharModal();
+    this.exibirToast('⭐ Sua avaliação foi publicada!');
+  }
+
+  darLike(c: Comentario): void {
+    if (c.votouLike) {
+      c.likes--;
+      c.votouLike = false;
+    } else {
+      c.likes++;
+      if (c.votouDislike) {
+        c.dislikes--;
+        c.votouDislike = false;
+      }
+      c.votouLike = true;
+    }
+    this.salvarAvaliacoes();
+  }
+
+  darDislike(c: Comentario): void {
+    if (c.votouDislike) {
+      c.dislikes--;
+      c.votouDislike = false;
+    } else {
+      c.dislikes++;
+      if (c.votouLike) {
+        c.likes--;
+        c.votouLike = false;
+      }
+      c.votouDislike = true;
+    }
+    this.salvarAvaliacoes();
+  }
+
+  getEstrelasTexto(num: number): string {
+    return '★'.repeat(num) + '☆'.repeat(5 - num);
+  }
+
+  private exibirToast(mensagem: string): void {
+    this.mensagemToast = mensagem;
+    this.cdr.markForCheck();
+
+    setTimeout(() => {
+      this.mensagemToast = null;
+      this.cdr.markForCheck();
+    }, 3000);
+  }
+
+  adicionarAoCarrinho(): void {
+    if (!this.jogo) return;
+
+    this.carrinhoFacade.adicionarProduto({
+      id: Number(this.ID_PRODUTO),
+      nome: this.jogo.nome,
+      preco: this.precoJogo,
+      quantidade: 1,
+      imagemUrl: this.galeriaImagens[0] || this.jogo.background_image || '',
+      plataforma: this.jogo.plataformas || 'PC / PS5',
+      categoria: 'Aventura, Ação',
+    });
+
+    this.exibirToast('🛒 Jogo adicionado ao carrinho!');
+  }
+
+  toggleFavorito(): void {
+    if (!this.jogo) return;
+
+    this.favorito = !this.favorito;
+
+    this.favoritosService.toggleFavorito({
+      id: this.ID_PRODUTO,
+      nome: this.jogo.nome,
+      imagem: this.galeriaImagens[0] || this.jogo.background_image || '',
+      imagemPosicao: 'center',
+      precoOriginal: this.precoOriginalFormatado,
+      precoPromocional: this.precoFormatado,
+      desconto: '-35%',
+      genero: 'Aventura / Ação',
+      plataforma: this.jogo.plataformas || 'PC / PS5',
+      categorias: ['aventura', 'acao'],
+    });
+
+    const msg = this.favorito ? '❤️ Adicionado aos favoritos!' : '💔 Removido dos favoritos!';
+    this.exibirToast(msg);
+  }
+
+  comprarAgora(): void {
+    this.adicionarAoCarrinho();
+    this.router.navigate(['/carrinho']);
+  }
+
+  private carregarDadosDoJogo(): void {
+    this.rawgService.obterDetalhesJogo(this.jogoSlug).subscribe({
+      next: (res: any) => {
+        this.jogo = {
+          id: res.id,
+          nome: res.name,
+          descricao: `Siga a sombria história da jovem Amicia e seu irmão mais novo, Hugo, em uma jornada comovente pela darkest era da história francesa. Perseguidos por soldados da Inquisição e cercados por enxames implacáveis de ratos que espalham a Peste Negra, Amicia e Hugo aprenderão a confiar um no outro. Lutando contra adversidades impossíveis, eles combaterão o medo e lutarão para sobreviver em um mundo brutal que busca destruí-los.`,
+          dataLancamento: res.released ? res.released.split('-').reverse().join('/') : '14/05/2019',
+          desenvolvedoras: res.developers?.[0]?.name || 'Asobo Studio',
+          distribuidoras: res.publishers?.[0]?.name || 'Focus Entertainment',
+          classificacaoEtaria: '+18',
+          plataformas: res.platforms?.map((p: any) => p.platform.name).join(' / ') || 'PC / PS5',
+          background_image: res.background_image,
+        };
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Erro ao buscar detalhes do jogo:', err);
+        this.erro = true;
+        this.cdr.markForCheck();
+      },
+    });
+
+    this.rawgService.obterScreenshots(this.jogoSlug).subscribe({
+      next: (res) => {
+        if (res.results && res.results.length > 0) {
+          const capaSteam = `https://cdn.cloudflare.steamstatic.com/steam/apps/${this.steamAppId}/capsule_616x353.jpg`;
+          const screenshots = res.results.map((item: any) => item.image);
+
+          this.galeriaImagens = [capaSteam, ...screenshots];
+          this.salvarNoCache({ jogo: this.jogo, imagens: this.galeriaImagens });
+        }
+        this.carregando = false;
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Erro ao carregar screenshots:', err);
+        this.carregando = false;
+        this.erro = true;
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  private carregarDoCache(): void {
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        const cache = sessionStorage.getItem(CHAVE_CACHE);
+        if (cache) {
+          const dados = JSON.parse(cache);
+          this.jogo = dados.jogo;
+          this.galeriaImagens = dados.imagens;
+        }
+      }
+    } catch {}
+  }
+
+  private salvarNoCache(dados: any): void {
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem(CHAVE_CACHE, JSON.stringify(dados));
+      }
+    } catch {}
+  }
+
+  proximaFoto(): void {
+    if (this.galeriaImagens.length === 0) return;
+    this.indiceAtivo = this.indiceAtivo < this.galeriaImagens.length - 1 ? this.indiceAtivo + 1 : 0;
+  }
+
+  fotoAnterior(): void {
+    if (this.galeriaImagens.length === 0) return;
+    this.indiceAtivo = this.indiceAtivo > 0 ? this.indiceAtivo - 1 : this.galeriaImagens.length - 1;
+  }
+
+  selecionarIndice(index: number): void {
+    this.indiceAtivo = index;
+  }
+
+  irParaHome(): void {
+    this.router.navigate(['/']);
+  }
+
+  irParaJogos(): void {
+    this.router.navigate(['/jogos']);
+  }
+}
+
+===== src/app/features/produtos/assassins-creed-black-flag/assassins-creed-black-flag.css =====
+/* --- CONTAINER GERAL DA PÁGINA --- */
+.pagina-detalhes {
+  margin-top: 80px;
+  background: transparent; 
+  color: #ffffff;
+  padding: 40px 40px 24px 40px;
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif;
+  box-sizing: border-box;
+}
+
+/* --- MENSAGEM FLUTUANTE (TOAST) --- */
+.toast-notificacao {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #00f0ff;
+  color: #0a1626;
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 0.95rem;
+  box-shadow: 0 8px 24px rgba(0, 240, 255, 0.4);
+  z-index: 9999;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.breadcrumb {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 20px;
+}
+
+.breadcrumb-link {
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.breadcrumb-link:hover {
+  color: #72ecff;
+  text-decoration: underline;
+}
+
+.grid-principal {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+.secao-midia {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.container-imagem-destaque {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(11, 28, 48, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+.img-destaque {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.badge-desconto {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 10;
+  background: #0088ff;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 4px 10px;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.badge-classificacao {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  background: #000000;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 4px 10px;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.btn-seta {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.6);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  cursor: pointer;
+  z-index: 5;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-seta:hover {
+  background: #0088ff;
+  border-color: #0088ff;
+}
+
+.btn-prev { left: 12px; }
+.btn-next { right: 12px; }
+
+.fila-miniaturas {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 12px;
+  margin-top: 14px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(79, 195, 232, 0.4) transparent;
+}
+
+.fila-miniaturas::-webkit-scrollbar {
+  height: 6px;
+  background: transparent;
+}
+
+.fila-miniaturas::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.fila-miniaturas::-webkit-scrollbar-thumb {
+  background: rgba(79, 195, 232, 0.3);
+  border-radius: 10px;
+  transition: background 0.2s ease;
+}
+
+.fila-miniaturas::-webkit-scrollbar-thumb:hover {
+  background: #4fc3e8;
+}
+
+.thumb-item {
+  flex: 0 0 140px;
+  height: 80px;
+  background: none;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  padding: 0;
+  cursor: pointer;
+  overflow: hidden;
+  opacity: 0.55;
+  transition: all 0.2s;
+}
+
+.thumb-item:hover {
+  opacity: 0.85;
+}
+
+.thumb-item.ativo {
+  border-color: #00d2ff;
+  opacity: 1;
+  box-shadow: 0 0 12px rgba(0, 210, 255, 0.6);
+}
+
+.thumb-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.secao-info {
+  width: 100%;
+}
+
+.titulo-jogo {
+  font-size: 2.2rem;
+  font-weight: 800;
+  margin: 0 0 8px 0;
+  color: #ffffff;
+}
+
+.subtitulos {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}
+
+.categoria-tag {
+  color: #72ecff;
+}
+
+.avaliacao-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.estrelas {
+  color: #f59e0b;
+}
+
+.destaques-lista {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.destaques-lista li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0;
+}
+
+.card-compra, 
+.tabela-fatos, 
+.secao-detalhada, 
+.secao-avaliacoes {
+  background: rgba(11, 28, 48, 0.75);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+}
+
+.card-compra {
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.precos-linha {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.preco-original {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-decoration: line-through;
+}
+
+.preco-promo {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #72ecff;
+}
+
+.acoes-botoes {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+
+.btn-adicionar {
+  flex: 1;
+  background: #0088ff;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-adicionar:hover {
+  background: #0066cc;
+  transform: translateY(-2px);
+}
+
+.btn-favorito {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.55);
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s, transform 0.2s;
+}
+
+.btn-favorito:hover {
+  transform: scale(1.1);
+}
+
+.icon-heart {
+  width: 24px;
+  height: 24px;
+}
+
+.btn-favorito.favoritado {
+  color: #ff4757;
+}
+
+.btn-comprar {
+  width: 100%;
+  background: transparent;
+  border: 1px solid #72ecff;
+  color: #72ecff;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-comprar:hover {
+  background: rgba(114, 236, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.compra-segura {
+  text-align: center;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 10px;
+}
+
+.tabela-fatos {
+  padding: 16px;
+}
+
+.fato-linha {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.fato-linha:last-child {
+  border-bottom: none;
+}
+
+.fato-linha span {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.fato-linha strong {
+  color: #ffffff;
+}
+
+.secao-detalhada, 
+.secao-avaliacoes {
+  padding: 28px;
+  margin-top: 32px;
+}
+
+.secao-detalhada h2, 
+.secao-avaliacoes h2 {
+  font-size: 1.1rem;
+  margin-bottom: 14px;
+  color: #ffffff;
+}
+
+.descricao-paragrafo {
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.6;
+}
+
+.secao-avaliacoes {
+  margin-bottom: 40px;
+}
+
+.grid-avaliacoes {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.resumo-avaliacoes-card {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+}
+
+.nota-gigante {
+  font-size: 3rem;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.total-votos {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+  display: block;
+  margin-top: 4px;
+  margin-bottom: 20px;
+}
+
+.barras-avaliacao {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+  text-align: left;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.linha-barra {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.linha-barra span:first-child {
+  width: 55px;
+}
+
+.barra-fundo {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.barra-progresso {
+  height: 100%;
+  background: #0088ff;
+  border-radius: 3px;
+}
+
+.votos-num {
+  width: 35px;
+  text-align: right;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.btn-escrever-avaliacao {
+  width: 100%;
+  background: transparent;
+  border: 1px solid #0088ff;
+  color: #72ecff;
+  padding: 10px;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-escrever-avaliacao:hover {
+  background: rgba(0, 136, 255, 0.15);
+}
+
+.lista-comentarios {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.comentario-card {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.autor-cabecalho {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.avatar-autor {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #0088ff;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.info-autor {
+  flex: 1;
+}
+
+.info-autor strong {
+  display: block;
+  font-size: 0.9rem;
+  color: #ffffff;
+}
+
+.estrelas-mini {
+  font-size: 0.75rem;
+  color: #f59e0b;
+}
+
+.data-comentario {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.texto-comentario {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.reacoes-comentario {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.btn-reacao {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.btn-reacao:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.btn-reacao.ativo {
+  background: rgba(0, 240, 255, 0.2);
+  border-color: #00f0ff;
+  color: #00f0ff;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-card {
+  background: #0f1e31;
+  border: 1px solid rgba(79, 195, 232, 0.3);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 18px 24px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #00f0ff;
+}
+
+.btn-fechar-modal {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.modal-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.campo-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.campo-grupo label {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.campo-grupo input,
+.campo-grupo textarea {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+.campo-grupo input:focus,
+.campo-grupo textarea:focus {
+  outline: none;
+  border-color: #00f0ff;
+}
+
+.seletor-estrelas-botoes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-estrela-opcao {
+  background: transparent;
+  border: none;
+  font-size: 1.6rem;
+  color: rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  transition: transform 0.15s ease, color 0.15s ease;
+  padding: 0;
+  line-height: 1;
+}
+
+.btn-estrela-opcao:hover,
+.btn-estrela-opcao.selecionado {
+  color: #f59e0b;
+}
+
+.btn-estrela-opcao:hover {
+  transform: scale(1.25);
+}
+
+.texto-nota-selecionada {
+  margin-left: auto;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #72ecff;
+}
+
+.modal-acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.btn-cancelar {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-cancelar:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.btn-enviar {
+  background: #00f0ff;
+  color: #0a1626;
+  border: none;
+  font-weight: 800;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-enviar:hover {
+  opacity: 0.9;
+}
+
+.estado-alternativo {
+  text-align: center;
+  padding: 80px 20px;
+  color: #ffffff;
+  font-size: 1.1rem;
+}
+
+.cabecalho-navegacao {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.cabecalho-navegacao .breadcrumb {
+  margin-bottom: 0;
+}
+
+.btn-voltar {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.icon-pirata {
+  width: 18px;
+  height: 18px;
+  stroke: #ffffff;
+  transition: transform 0.3s ease, stroke 0.2s ease;
+}
+
+.btn-voltar:hover {
+  background: rgba(114, 236, 255, 0.15);
+  border-color: #72ecff;
+  color: #72ecff;
+}
+
+.btn-voltar:hover .icon-pirata {
+  stroke: #72ecff;
+  transform: rotate(-45deg);
+}
+
+/* --- CORES DE CLASSIFICAÇÃO ETÁRIA --- */
+.badge-classificacao.livre { background: #4ade80; color: #06231a; }
+.badge-classificacao.dez   { background: #4fc3e8; color: #06232f; }
+.badge-classificacao.doze  { background: #ffd93d; color: #3a2c00; }
+.badge-classificacao.quatorze { background: #ffb454; color: #3a2200; }
+.badge-classificacao.dezesseis { background: #ff8a3d; color: #3a1800; }
+.badge-classificacao.dezoito { background: #ff5252; color: #ffffff; }
+
+.badge-gratis {
+  background: #4ade80;
+  color: #06231a;
+}
+
+/* ==========================================================================
+   --- REGRAS DE RESPONSIVIDADE (MEDIA QUERIES) ---
+   ========================================================================== */
+
+/* Tablets e notebooks menores (Até 1024px) */
+@media (max-width: 1024px) {
+  .pagina-detalhes {
+    padding: 30px 20px 20px 20px;
+  }
+
+  .grid-principal {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .grid-avaliacoes {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .resumo-avaliacoes-card {
+    max-width: 100%;
+  }
+}
+
+/* Dispositivos Móveis (Até 768px) */
+@media (max-width: 768px) {
+  .pagina-detalhes {
+    margin-top: 60px;
+    padding: 16px;
+  }
+
+  .cabecalho-navegacao {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .titulo-jogo {
+    font-size: 1.6rem;
+  }
+
+  .thumb-item {
+    flex: 0 0 110px;
+    height: 65px;
+  }
+
+  .btn-seta {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+
+  .secao-detalhada, 
+  .secao-avaliacoes {
+    padding: 18px;
+    margin-top: 20px;
+  }
+
+  /* Requisitos de Sistema em uma coluna única */
+  .grid-requisitos {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  .toast-notificacao {
+    bottom: 16px;
+    right: 16px;
+    left: 16px;
+    text-align: center;
+  }
+}
+
+/* Telas Pequenas de Celular (Até 480px) */
+@media (max-width: 480px) {
+  .acoes-botoes {
+    flex-direction: row;
+  }
+
+  .btn-adicionar {
+    font-size: 0.85rem;
+    padding: 10px;
+  }
+
+  .preco-promo {
+    font-size: 1.5rem;
+  }
+
+  .modal-card {
+    max-width: 95%;
+  }
+
+  .modal-body {
+    padding: 16px;
+  }
+
+  .seletor-estrelas-botoes {
+    justify-content: space-between;
+  }
+
+  .btn-estrela-opcao {
+    font-size: 1.3rem;
+  }
+}
+
+===== src/app/features/produtos/assassins-creed-black-flag/assassins-creed-black-flag.html =====
+<!-- Mensagem Flutuante (Toast) -->
+<div class="toast-notificacao" *ngIf="mensagemToast">
+  {{ mensagemToast }}
+</div>
+
+<div class="pagina-detalhes" *ngIf="jogo; else estadoAlternativo">
+  <!-- Breadcrumb com Botão Voltar -->
+  <div class="cabecalho-navegacao">
+    <button class="btn-voltar" (click)="voltarPagina()">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="icon-pirata"
+      >
+        <circle cx="12" cy="12" r="9"></circle>
+        <circle cx="12" cy="12" r="3"></circle>
+        <line x1="12" y1="1" x2="12" y2="23"></line>
+        <line x1="1" y1="12" x2="23" y2="12"></line>
+        <line x1="4.22" y1="4.22" x2="19.78" y2="19.78"></line>
+        <line x1="4.22" y1="19.78" x2="19.78" y2="4.22"></line>
+      </svg>
+      Voltar
+    </button>
+    <div class="breadcrumb">
+      <span class="breadcrumb-link" (click)="irParaHome()">HOME</span> &gt;
+      <span class="breadcrumb-link" (click)="irParaJogos()">JOGOS</span> &gt;
+      <strong>{{ jogo.nome }}</strong>
+    </div>
+  </div>
+
+  <!-- GRID PRINCIPAL -->
+  <div class="grid-principal">
+    <!-- Mídia com Carrossel Nativo -->
+    <div class="secao-midia">
+      <div class="container-imagem-destaque">
+        <span class="badge-classificacao">{{ jogo.classificacaoEtaria }}</span>
+
+        <!-- Botões de Setas -->
+        <button
+          class="btn-seta btn-prev"
+          (click)="fotoAnterior()"
+          *ngIf="galeriaImagens.length > 1"
+        >
+          ❮
+        </button>
+
+        <!-- Imagem Principal -->
+        <img
+          *ngIf="galeriaImagens.length > 0"
+          [src]="galeriaImagens[indiceAtivo]"
+          [alt]="jogo.nome"
+          class="img-destaque"
+        />
+
+        <button class="btn-seta btn-next" (click)="proximaFoto()" *ngIf="galeriaImagens.length > 1">
+          ❯
+        </button>
+      </div>
+
+      <!-- Fila de Miniaturas -->
+      <div class="fila-miniaturas" *ngIf="galeriaImagens.length > 0">
+        <button
+          *ngFor="let img of galeriaImagens; let i = index"
+          class="thumb-item"
+          [class.ativo]="i === indiceAtivo"
+          (click)="selecionarIndice(i)"
+        >
+          <img [src]="img" alt="Thumbnail gameplay" />
+        </button>
+      </div>
+    </div>
+
+    <!-- Painel Lateral de Informações -->
+    <div class="secao-info">
+      <h1 class="titulo-jogo">{{ jogo.nome }}</h1>
+
+      <div class="subtitulos">
+        <span>{{ jogo.desenvolvedoras }}</span> • <span>{{ jogo.plataformas }}</span> •
+        <span class="categoria-tag">Ação, Aventura, Mundo Aberto</span>
+      </div>
+
+      <div class="avaliacao-container">
+        <div class="estrelas">★★★★★</div>
+        <span class="nota-numero">4.8</span>
+        <span class="total-avaliacoes">(3.980 avaliações)</span>
+      </div>
+
+      <ul class="destaques-lista">
+        <li>
+          <i class="fas fa-ship"></i> <strong>Comande o Gralha:</strong> Pilote seu próprio navio pirata e trave batalhas navais épicas.
+        </li>
+        <li>
+          <i class="fas fa-skull-crossbones"></i> <strong>A Era de Ouro dos Piratas:</strong> Navegue ao lado de lendas como Barba Negra.
+        </li>
+        <li>
+          <i class="fas fa-water"></i> <strong>Caribe Sem Limites:</strong> Saqueie fortalezas, explore ruínas maias e mergulhe em naufrágios.
+        </li>
+      </ul>
+
+      <div class="card-compra">
+        <div class="precos-linha">
+          <span class="preco-promo">R$ 119,99</span>
+        </div>
+
+        <div class="acoes-botoes">
+          <button class="btn-adicionar" (click)="adicionarAoCarrinho()">
+            <i class="fas fa-shopping-cart"></i> Adicionar ao carrinho
+          </button>
+
+          <button
+            class="btn-favorito"
+            [class.favoritado]="favorito"
+            (click)="toggleFavorito()"
+            type="button"
+            title="Favoritar"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              [attr.fill]="favorito ? '#ff4757' : 'none'"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="icon-heart"
+            >
+              <path
+                d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+              ></path>
+            </svg>
+          </button>
+        </div>
+
+        <button class="btn-comprar" (click)="comprarAgora()">Comprar agora</button>
+        <div class="compra-segura"><i class="fas fa-lock"></i> Compra 100% segura</div>
+      </div>
+
+      <!-- Fatos do Jogo -->
+      <div class="tabela-fatos">
+        <div class="fato-linha">
+          <span>Plataforma:</span> <strong>{{ jogo.plataformas }}</strong>
+        </div>
+        <div class="fato-linha"><span>Gênero:</span> <strong>Ação, Aventura, Mundo Aberto</strong></div>
+        <div class="fato-linha">
+          <span>Lançamento:</span> <strong>{{ jogo.dataLancamento }}</strong>
+        </div>
+        <div class="fato-linha">
+          <span>Desenvolvedor:</span> <strong>{{ jogo.desenvolvedoras }}</strong>
+        </div>
+        <div class="fato-linha">
+          <span>Distribuidora:</span> <strong>{{ jogo.distribuidoras }}</strong>
+        </div>
+        <div class="fato-linha">
+          <span>Idioma:</span> <strong>Português (Brasil) e mais</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEÇÃO SOBRE O JOGO -->
+  <div class="secao-detalhada">
+    <h2>SOBRE O JOGO</h2>
+    <p class="descricao-paragrafo">{{ jogo.descricao }}</p>
+  </div>
+
+  <!-- SEÇÃO REQUISITOS DE SISTEMA -->
+  <div class="secao-detalhada secao-requisitos">
+    <h2>REQUISITOS DE SISTEMA (PC)</h2>
+    <div class="grid-requisitos" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;">
+      <div class="req-coluna">
+        <h3 style="color: #4feaf5; font-size: 0.95rem; margin-bottom: 10px;">Mínimos:</h3>
+        <ul style="list-style: none; padding: 0; font-size: 0.85rem; color: rgba(255,255,255,0.8); display: flex; flex-direction: column; gap: 6px;">
+          <li><strong>Sistema Operacional:</strong> Windows 10 (64-bit)</li>
+          <li><strong>Processador:</strong> Intel Core2Quad Q8400 (2.6 GHz) / AMD Athlon II X4 620 (2.6 GHz)</li>
+          <li><strong>Memória:</strong> 2 GB de RAM</li>
+          <li><strong>Placa de Vídeo:</strong> NVIDIA GeForce GTX 260 / AMD Radeon HD 4870 (512MB VRAM)</li>
+          <li><strong>Armazenamento:</strong> 30 GB de espaço disponível</li>
+        </ul>
+      </div>
+      <div class="req-coluna">
+        <h3 style="color: #4feaf5; font-size: 0.95rem; margin-bottom: 10px;">Recomendados:</h3>
+        <ul style="list-style: none; padding: 0; font-size: 0.85rem; color: rgba(255,255,255,0.8); display: flex; flex-direction: column; gap: 6px;">
+          <li><strong>Sistema Operacional:</strong> Windows 10 (64-bit)</li>
+          <li><strong>Processador:</strong> Intel Core i5 2400S (2.5 GHz) / AMD Phenom II x4 940 (3.0 GHz)</li>
+          <li><strong>Memória:</strong> 4 GB de RAM</li>
+          <li><strong>Placa de Vídeo:</strong> NVIDIA GeForce GTX 470 / AMD Radeon HD 5850 (1GB VRAM)</li>
+          <li><strong>Armazenamento:</strong> 30 GB de espaço disponível</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Escrever Avaliação -->
+  <div class="modal-overlay" *ngIf="exibirModalAvaliacao">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>ESCREVER AVALIAÇÃO</h3>
+        <button class="btn-fechar-modal" (click)="fecharModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="campo-grupo">
+          <label>Seu Nome ou GamerTag</label>
+          <input type="text" [(ngModel)]="novoNome" placeholder="Ex: EdwardKenway_BR" />
+        </div>
+
+        <div class="campo-grupo">
+          <label>Sua Nota</label>
+          <div class="seletor-estrelas-botoes">
+            <button
+              type="button"
+              *ngFor="let nota of [1, 2, 3, 4, 5]"
+              class="btn-estrela-opcao"
+              [class.selecionado]="novaNota >= nota"
+              (click)="novaNota = nota"
+            >
+              ★
+            </button>
+            <span class="texto-nota-selecionada">{{ novaNota }} de 5</span>
+          </div>
+        </div>
+
+        <div class="campo-grupo">
+          <label>Sua Opinião</label>
+          <textarea
+            [(ngModel)]="novoTexto"
+            rows="4"
+            placeholder="O que você achou do jogo?"
+          ></textarea>
+        </div>
+
+        <div class="modal-acoes">
+          <button class="btn-cancelar" (click)="fecharModal()">Cancelar</button>
+          <button class="btn-enviar" (click)="enviarAvaliacao()">Publicar Avaliação</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEÇÃO AVALIAÇÕES DOS JOGADORES -->
+  <div class="secao-avaliacoes" *ngIf="jogo">
+    <h2>AVALIAÇÕES DOS JOGADORES</h2>
+
+    <div class="grid-avaliacoes">
+      <div class="resumo-avaliacoes-card">
+        <div class="nota-gigante">4.8</div>
+        <div class="estrelas">★★★★★</div>
+        <span class="total-votos">{{ 3980 + listaComentarios.length }} avaliações</span>
+
+        <div class="barras-avaliacao">
+          <div class="linha-barra">
+            <span>5 estrelas</span>
+            <div class="barra-fundo"><div class="barra-progresso" style="width: 85%"></div></div>
+            <span class="votos-num">3.383</span>
+          </div>
+          <div class="linha-barra">
+            <span>4 estrelas</span>
+            <div class="barra-fundo"><div class="barra-progresso" style="width: 11%"></div></div>
+            <span class="votos-num">437</span>
+          </div>
+          <div class="linha-barra">
+            <span>3 estrelas</span>
+            <div class="barra-fundo"><div class="barra-progresso" style="width: 3%"></div></div>
+            <span class="votos-num">119</span>
+          </div>
+          <div class="linha-barra">
+            <span>2 estrelas</span>
+            <div class="barra-fundo"><div class="barra-progresso" style="width: 0.5%"></div></div>
+            <span class="votos-num">20</span>
+          </div>
+          <div class="linha-barra">
+            <span>1 estrela</span>
+            <div class="barra-fundo"><div class="barra-progresso" style="width: 0.5%"></div></div>
+            <span class="votos-num">21</span>
+          </div>
+        </div>
+
+        <button class="btn-escrever-avaliacao" (click)="abrirModal()">Escrever avaliação</button>
+      </div>
+
+      <div class="lista-comentarios">
+        <div class="comentario-card" *ngFor="let c of listaComentarios">
+          <div class="autor-cabecalho">
+            <div class="avatar-autor">{{ c.avatar }}</div>
+            <div class="info-autor">
+              <strong>{{ c.autor }}</strong>
+              <div class="estrelas-mini">{{ getEstrelasTexto(c.estrelas) }}</div>
+            </div>
+            <span class="data-comentario">{{ c.data }}</span>
+          </div>
+
+          <p class="texto-comentario">{{ c.texto }}</p>
+
+          <div class="reacoes-comentario">
+            <span>Isso foi útil?</span>
+            <button class="btn-reacao" [class.ativo]="c.votouLike" (click)="darLike(c)">
+              👍 {{ c.likes }}
+            </button>
+            <button class="btn-reacao" [class.ativo]="c.votouDislike" (click)="darDislike(c)">
+              👎 {{ c.dislikes }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Estado de Carregamento / Erro -->
+<ng-template #estadoAlternativo>
+  <div class="estado-alternativo">
+    <p *ngIf="carregando">Carregando informações do jogo...</p>
+    <p *ngIf="!carregando && erro">
+      Não foi possível carregar os dados do jogo agora. Tente novamente em instantes.
+    </p>
+  </div>
+</ng-template>
+
+===== src/app/features/produtos/assassins-creed-black-flag/assassins-creed-black-flag.spec.ts =====
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+
+import { AssassinsCreedBlackFlag } from './assassins-creed-black-flag';
+
+describe('AssassinsCreedBlackFlag', () => {
+  let component: AssassinsCreedBlackFlag;
+  let fixture: ComponentFixture<AssassinsCreedBlackFlag>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [AssassinsCreedBlackFlag],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(AssassinsCreedBlackFlag);
+    component = fixture.componentInstance;
+    await fixture.whenStable();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+});
+
+
+===== src/app/features/produtos/assassins-creed-black-flag/assassins-creed-black-flag.ts =====
+import { Component, OnInit, inject, ChangeDetectorRef, afterNextRender } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { Location } from '@angular/common';
+import { RawgService,DetalhesJogo } from '../../../core/services/rawg.service';
+import { CarrinhoFacade } from '../../../core/facades/carrinho.facade';
+import { FavoritosService } from '../../../core/services/favoritos.service';
+
+export interface Comentario {
+  id: number;
+  autor: string;
+  avatar: string;
+  estrelas: number;
+  texto: string;
+  data: string;
+  likes: number;
+  dislikes: number;
+  votouLike?: boolean;
+  votouDislike?: boolean;
+}
+
+const CHAVE_CACHE = 'ac_blackflag_dados_completos';
+const CHAVE_AVALIACOES = 'ac_blackflag_avaliacoes_lista';
+
+@Component({
+  selector: 'app-assassins-creed-black-flag',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './assassins-creed-black-flag.html',
+  styleUrl: './assassins-creed-black-flag.css',
+})
+export class AssassinsCreedBlackFlag implements OnInit {
+  jogo: DetalhesJogo | null = null;
+  carregando: boolean = true;
+  erro: boolean = false;
+
+  galeriaImagens: string[] = [];
+  indiceAtivo: number = 0;
+  favorito: boolean = false;
+  mensagemToast: string | null = null;
+
+  exibirModalAvaliacao: boolean = false;
+  novoNome: string = '';
+  novoTexto: string = '';
+  novaNota: number = 5;
+
+  private location = inject(Location);
+
+  voltarPagina(): void {
+    this.location.back();
+  }
+
+  listaComentarios: Comentario[] = [
+    {
+      id: 1,
+      autor: 'EdwardKenway',
+      avatar: 'E',
+      estrelas: 5,
+      texto: 'O melhor jogo de piratas já criado na história! As canções de marujo (shanties) e a navegação com o Gralha são inesquecíveis.',
+      data: '22/08/2026',
+      likes: 310,
+      dislikes: 4,
+    },
+    {
+      id: 2,
+      autor: 'CaptainBlackbeard',
+      avatar: 'C',
+      estrelas: 5,
+      texto: 'Sensação de liberdade incrível ao navegar pelo Caribe, abordar navios inimigos e procurar tesouros escondidos.',
+      data: '20/08/2026',
+      likes: 185,
+      dislikes: 2,
+    },
+  ];
+
+  readonly ID_PRODUTO = '11';
+  readonly precoJogo = 119.99;
+  readonly precoFormatado = 'R$ 119,99';
+
+  private cdr = inject(ChangeDetectorRef);
+  private rawgService = inject(RawgService);
+  private router = inject(Router);
+  private carrinhoFacade = inject(CarrinhoFacade);
+  private favoritosService = inject(FavoritosService);
+
+  private jogoSlug = 'assassins-creed-iv-black-flag';
+  private steamAppId = '242050';
+
+  constructor() {
+    this.carregarDoCache();
+
+    afterNextRender(() => {
+      this.favorito = this.favoritosService.ehFavorito(this.ID_PRODUTO);
+      this.carregarAvaliacoes();
+
+      if (!this.jogo || this.galeriaImagens.length === 0) {
+        this.carregarDadosDoJogo();
+      } else {
+        this.carregando = false;
+      }
+    });
+  }
+
+  ngOnInit(): void {}
+
+  carregarAvaliacoes(): void {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const salvas = localStorage.getItem(CHAVE_AVALIACOES);
+        if (salvas) {
+          this.listaComentarios = JSON.parse(salvas);
+        }
+      }
+    } catch {}
+  }
+
+  salvarAvaliacoes(): void {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(CHAVE_AVALIACOES, JSON.stringify(this.listaComentarios));
+      }
+    } catch {}
+  }
+
+  abrirModal(): void {
+    this.exibirModalAvaliacao = true;
+  }
+
+  fecharModal(): void {
+    this.exibirModalAvaliacao = false;
+    this.novoNome = '';
+    this.novoTexto = '';
+    this.novaNota = 5;
+  }
+
+  enviarAvaliacao(): void {
+    if (!this.novoNome.trim() || !this.novoTexto.trim()) {
+      this.exibirToast('⚠️ Preencha seu nome e comentário!');
+      return;
+    }
+
+    const hoje = new Date();
+    const dataFormatada = hoje.toLocaleDateString('pt-BR');
+
+    const novaAvaliacao: Comentario = {
+      id: Date.now(),
+      autor: this.novoNome.trim(),
+      avatar: this.novoNome.trim().charAt(0).toUpperCase(),
+      estrelas: Number(this.novaNota),
+      texto: this.novoTexto.trim(),
+      data: dataFormatada,
+      likes: 0,
+      dislikes: 0,
+    };
+
+    this.listaComentarios.unshift(novaAvaliacao);
+    this.salvarAvaliacoes();
+    this.fecharModal();
+    this.exibirToast('⭐ Sua avaliação foi publicada!');
+  }
+
+  darLike(c: Comentario): void {
+    if (c.votouLike) {
+      c.likes--;
+      c.votouLike = false;
+    } else {
+      c.likes++;
+      if (c.votouDislike) {
+        c.dislikes--;
+        c.votouDislike = false;
+      }
+      c.votouLike = true;
+    }
+    this.salvarAvaliacoes();
+  }
+
+  darDislike(c: Comentario): void {
+    if (c.votouDislike) {
+      c.dislikes--;
+      c.votouDislike = false;
+    } else {
+      c.dislikes++;
+      if (c.votouLike) {
+        c.likes--;
+        c.votouLike = false;
+      }
+      c.votouDislike = true;
+    }
+    this.salvarAvaliacoes();
+  }
+
+  getEstrelasTexto(num: number): string {
+    return '★'.repeat(num) + '☆'.repeat(5 - num);
+  }
+
+  private exibirToast(mensagem: string): void {
+    this.mensagemToast = mensagem;
+    this.cdr.markForCheck();
+
+    setTimeout(() => {
+      this.mensagemToast = null;
+      this.cdr.markForCheck();
+    }, 3000);
+  }
+
+  adicionarAoCarrinho(): void {
+    if (!this.jogo) return;
+
+    this.carrinhoFacade.adicionarProduto({
+      id: Number(this.ID_PRODUTO),
+      nome: this.jogo.nome,
+      preco: this.precoJogo,
+      quantidade: 1,
+      imagemUrl: this.galeriaImagens[0] || this.jogo.background_image || '',
+      plataforma: this.jogo.plataformas || 'PC / PS4 / Xbox',
+      categoria: 'Ação, Aventura, Mundo Aberto',
+    });
+
+    this.exibirToast('🛒 Jogo adicionado ao carrinho!');
+  }
+
+  toggleFavorito(): void {
+    if (!this.jogo) return;
+
+    this.favorito = !this.favorito;
+
+    this.favoritosService.toggleFavorito({
+      id: this.ID_PRODUTO,
+      nome: this.jogo.nome,
+      imagem: this.galeriaImagens[0] || this.jogo.background_image || '',
+      imagemPosicao: 'center',
+      precoOriginal: this.precoFormatado,
+      precoPromocional: this.precoFormatado,
+      desconto: 0,
+      genero: 'Ação / Mundo Aberto',
+      plataforma: this.jogo.plataformas || 'PC / PS4 / Xbox',
+      categorias: ['acao', 'aventura', 'mundo-aberto'],
+    });
+
+    const msg = this.favorito ? '❤️ Adicionado aos favoritos!' : '💔 Removido dos favoritos!';
+    this.exibirToast(msg);
+  }
+
+  comprarAgora(): void {
+    this.adicionarAoCarrinho();
+    this.router.navigate(['/carrinho']);
+  }
+
+  private carregarDadosDoJogo(): void {
+    this.rawgService.obterDetalhesJogo(this.jogoSlug).subscribe({
+      next: (res: any) => {
+        this.jogo = {
+          id: res.id,
+          nome: res.name,
+          descricao: `Ano de 1715. Os Piratas dominam o Caribe e estabeleceram sua própria República onde a ganância, a crueldade e a extorsão são a lei. Entre esses fora-da-lei está um jovem e destemido capitão chamado Edward Kenway. Sua luta por glória e fortuna lhe rendeu o respeito de lendas como Barba Negra, mas também o arrastou para a antiga guerra entre Assassinos e Templários, uma ameaça que pode destruir tudo o que os piratas construíram. Comande o seu navio, o Gralha, e explore um vasto e imersivo mundo aberto nas águas caribenhas.`,
+          dataLancamento: res.released ? res.released.split('-').reverse().join('/') : '29/10/2013',
+          desenvolvedoras: res.developers?.[0]?.name || 'Ubisoft Montreal',
+          distribuidoras: res.publishers?.[0]?.name || 'Ubisoft',
+          classificacaoEtaria: '+18',
+          plataformas: res.platforms?.map((p: any) => p.platform.name).join(' / ') || 'PC / PlayStation / Xbox',
+          background_image: res.background_image,
+        };
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Erro ao buscar detalhes do jogo:', err);
+        this.erro = true;
+        this.cdr.markForCheck();
+      },
+    });
+
+    this.rawgService.obterScreenshots(this.jogoSlug).subscribe({
+      next: (res) => {
+        if (res.results && res.results.length > 0) {
+          const capaSteam = `https://cdn.cloudflare.steamstatic.com/steam/apps/${this.steamAppId}/capsule_616x353.jpg`;
+          const screenshots = res.results.map((item: any) => item.image);
+
+          this.galeriaImagens = [capaSteam, ...screenshots];
+          this.salvarNoCache({ jogo: this.jogo, imagens: this.galeriaImagens });
+        }
+        this.carregando = false;
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Erro ao carregar screenshots:', err);
+        this.carregando = false;
+        this.erro = true;
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  private carregarDoCache(): void {
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        const cache = sessionStorage.getItem(CHAVE_CACHE);
+        if (cache) {
+          const dados = JSON.parse(cache);
+          this.jogo = dados.jogo;
+          this.galeriaImagens = dados.imagens;
+        }
+      }
+    } catch {}
+  }
+
+  private salvarNoCache(dados: any): void {
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem(CHAVE_CACHE, JSON.stringify(dados));
+      }
+    } catch {}
+  }
+
+  proximaFoto(): void {
+    if (this.galeriaImagens.length === 0) return;
+    this.indiceAtivo = this.indiceAtivo < this.galeriaImagens.length - 1 ? this.indiceAtivo + 1 : 0;
+  }
+
+  fotoAnterior(): void {
+    if (this.galeriaImagens.length === 0) return;
+    this.indiceAtivo = this.indiceAtivo > 0 ? this.indiceAtivo - 1 : this.galeriaImagens.length - 1;
+  }
+
+  selecionarIndice(index: number): void {
+    this.indiceAtivo = index;
+  }
+
+  irParaHome(): void {
+    this.router.navigate(['/']);
+  }
+
+  irParaJogos(): void {
+    this.router.navigate(['/jogos']);
+  }
+}
+
+===== src/app/features/produtos/call-of-duty-modern-warfare-ii/call-of-duty-modern-warfare-ii.css =====
+/* --- CONTAINER GERAL DA PÁGINA --- */
+.pagina-detalhes {
+  margin-top: 80px;
+  background: transparent; 
+  color: #ffffff;
+  padding: 40px 40px 24px 40px;
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif;
+  box-sizing: border-box;
+}
+
+/* --- MENSAGEM FLUTUANTE (TOAST) --- */
+.toast-notificacao {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #00f0ff;
+  color: #0a1626;
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 0.95rem;
+  box-shadow: 0 8px 24px rgba(0, 240, 255, 0.4);
+  z-index: 9999;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.breadcrumb {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 20px;
+}
+
+.breadcrumb-link {
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.breadcrumb-link:hover {
+  color: #72ecff;
+  text-decoration: underline;
+}
+
+.grid-principal {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+.secao-midia {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.container-imagem-destaque {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(11, 28, 48, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+.img-destaque {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.badge-desconto {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 10;
+  background: #0088ff;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 4px 10px;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.badge-classificacao {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  background: #000000;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 4px 10px;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.btn-seta {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.6);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  cursor: pointer;
+  z-index: 5;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-seta:hover {
+  background: #0088ff;
+  border-color: #0088ff;
+}
+
+.btn-prev { left: 12px; }
+.btn-next { right: 12px; }
+
+.fila-miniaturas {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 12px;
+  margin-top: 14px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(79, 195, 232, 0.4) transparent;
+}
+
+.fila-miniaturas::-webkit-scrollbar {
+  height: 6px;
+  background: transparent;
+}
+
+.fila-miniaturas::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.fila-miniaturas::-webkit-scrollbar-thumb {
+  background: rgba(79, 195, 232, 0.3);
+  border-radius: 10px;
+  transition: background 0.2s ease;
+}
+
+.fila-miniaturas::-webkit-scrollbar-thumb:hover {
+  background: #4fc3e8;
+}
+
+.thumb-item {
+  flex: 0 0 140px;
+  height: 80px;
+  background: none;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  padding: 0;
+  cursor: pointer;
+  overflow: hidden;
+  opacity: 0.55;
+  transition: all 0.2s;
+}
+
+.thumb-item:hover {
+  opacity: 0.85;
+}
+
+.thumb-item.ativo {
+  border-color: #00d2ff;
+  opacity: 1;
+  box-shadow: 0 0 12px rgba(0, 210, 255, 0.6);
+}
+
+.thumb-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.secao-info {
+  width: 100%;
+}
+
+.titulo-jogo {
+  font-size: 2.2rem;
+  font-weight: 800;
+  margin: 0 0 8px 0;
+  color: #ffffff;
+}
+
+.subtitulos {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}
+
+.categoria-tag {
+  color: #72ecff;
+}
+
+.avaliacao-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.estrelas {
+  color: #f59e0b;
+}
+
+.destaques-lista {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.destaques-lista li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0;
+}
+
+.card-compra, 
+.tabela-fatos, 
+.secao-detalhada, 
+.secao-avaliacoes {
+  background: rgba(11, 28, 48, 0.75);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+}
+
+.card-compra {
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.precos-linha {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.preco-original {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-decoration: line-through;
+}
+
+.preco-promo {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #72ecff;
+}
+
+.acoes-botoes {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+
+.btn-adicionar {
+  flex: 1;
+  background: #0088ff;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-adicionar:hover {
+  background: #0066cc;
+  transform: translateY(-2px);
+}
+
+.btn-favorito {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.55);
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s, transform 0.2s;
+}
+
+.btn-favorito:hover {
+  transform: scale(1.1);
+}
+
+.icon-heart {
+  width: 24px;
+  height: 24px;
+}
+
+.btn-favorito.favoritado {
+  color: #ff4757;
+}
+
+.btn-comprar {
+  width: 100%;
+  background: transparent;
+  border: 1px solid #72ecff;
+  color: #72ecff;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-comprar:hover {
+  background: rgba(114, 236, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.compra-segura {
+  text-align: center;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 10px;
+}
+
+.tabela-fatos {
+  padding: 16px;
+}
+
+.fato-linha {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.fato-linha:last-child {
+  border-bottom: none;
+}
+
+.fato-linha span {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.fato-linha strong {
+  color: #ffffff;
+}
+
+.secao-detalhada, 
+.secao-avaliacoes {
+  padding: 28px;
+  margin-top: 32px;
+}
+
+.secao-detalhada h2, 
+.secao-avaliacoes h2 {
+  font-size: 1.1rem;
+  margin-bottom: 14px;
+  color: #ffffff;
+}
+
+.descricao-paragrafo {
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.6;
+}
+
+.secao-avaliacoes {
+  margin-bottom: 40px;
+}
+
+.grid-avaliacoes {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.resumo-avaliacoes-card {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+}
+
+.nota-gigante {
+  font-size: 3rem;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.total-votos {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+  display: block;
+  margin-top: 4px;
+  margin-bottom: 20px;
+}
+
+.barras-avaliacao {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+  text-align: left;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.linha-barra {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.linha-barra span:first-child {
+  width: 55px;
+}
+
+.barra-fundo {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.barra-progresso {
+  height: 100%;
+  background: #0088ff;
+  border-radius: 3px;
+}
+
+.votos-num {
+  width: 35px;
+  text-align: right;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.btn-escrever-avaliacao {
+  width: 100%;
+  background: transparent;
+  border: 1px solid #0088ff;
+  color: #72ecff;
+  padding: 10px;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-escrever-avaliacao:hover {
+  background: rgba(0, 136, 255, 0.15);
+}
+
+.lista-comentarios {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.comentario-card {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.autor-cabecalho {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.avatar-autor {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #0088ff;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.info-autor {
+  flex: 1;
+}
+
+.info-autor strong {
+  display: block;
+  font-size: 0.9rem;
+  color: #ffffff;
+}
+
+.estrelas-mini {
+  font-size: 0.75rem;
+  color: #f59e0b;
+}
+
+.data-comentario {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.texto-comentario {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.reacoes-comentario {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.btn-reacao {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.btn-reacao:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.btn-reacao.ativo {
+  background: rgba(0, 240, 255, 0.2);
+  border-color: #00f0ff;
+  color: #00f0ff;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-card {
+  background: #0f1e31;
+  border: 1px solid rgba(79, 195, 232, 0.3);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 18px 24px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #00f0ff;
+}
+
+.btn-fechar-modal {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.modal-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.campo-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.campo-grupo label {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.campo-grupo input,
+.campo-grupo textarea {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+.campo-grupo input:focus,
+.campo-grupo textarea:focus {
+  outline: none;
+  border-color: #00f0ff;
+}
+
+.seletor-estrelas-botoes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-estrela-opcao {
+  background: transparent;
+  border: none;
+  font-size: 1.6rem;
+  color: rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  transition: transform 0.15s ease, color 0.15s ease;
+  padding: 0;
+  line-height: 1;
+}
+
+.btn-estrela-opcao:hover,
+.btn-estrela-opcao.selecionado {
+  color: #f59e0b;
+}
+
+.btn-estrela-opcao:hover {
+  transform: scale(1.25);
+}
+
+.texto-nota-selecionada {
+  margin-left: auto;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #72ecff;
+}
+
+.modal-acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.btn-cancelar {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-cancelar:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.btn-enviar {
+  background: #00f0ff;
+  color: #0a1626;
+  border: none;
+  font-weight: 800;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-enviar:hover {
+  opacity: 0.9;
+}
+
+.estado-alternativo {
+  text-align: center;
+  padding: 80px 20px;
+  color: #ffffff;
+  font-size: 1.1rem;
+}
+
+.cabecalho-navegacao {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.cabecalho-navegacao .breadcrumb {
+  margin-bottom: 0;
+}
+
+.btn-voltar {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.icon-pirata {
+  width: 18px;
+  height: 18px;
+  stroke: #ffffff;
+  transition: transform 0.3s ease, stroke 0.2s ease;
+}
+
+.btn-voltar:hover {
+  background: rgba(114, 236, 255, 0.15);
+  border-color: #72ecff;
+  color: #72ecff;
+}
+
+.btn-voltar:hover .icon-pirata {
+  stroke: #72ecff;
+  transform: rotate(-45deg);
+}
+
+/* --- CORES DE CLASSIFICAÇÃO ETÁRIA --- */
+.badge-classificacao.livre { background: #4ade80; color: #06231a; }
+.badge-classificacao.dez   { background: #4fc3e8; color: #06232f; }
+.badge-classificacao.doze  { background: #ffd93d; color: #3a2c00; }
+.badge-classificacao.quatorze { background: #ffb454; color: #3a2200; }
+.badge-classificacao.dezesseis { background: #ff8a3d; color: #3a1800; }
+.badge-classificacao.dezoito { background: #ff5252; color: #ffffff; }
+
+.badge-gratis {
+  background: #4ade80;
+  color: #06231a;
+}
+
+/* ==========================================================================
+   --- REGRAS DE RESPONSIVIDADE (MEDIA QUERIES) ---
+   ========================================================================== */
+
+/* Tablets e notebooks menores (Até 1024px) */
+@media (max-width: 1024px) {
+  .pagina-detalhes {
+    padding: 30px 20px 20px 20px;
+  }
+
+  .grid-principal {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .grid-avaliacoes {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .resumo-avaliacoes-card {
+    max-width: 100%;
+  }
+}
+
+/* Dispositivos Móveis (Até 768px) */
+@media (max-width: 768px) {
+  .pagina-detalhes {
+    margin-top: 60px;
+    padding: 16px;
+  }
+
+  .cabecalho-navegacao {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .titulo-jogo {
+    font-size: 1.6rem;
+  }
+
+  .thumb-item {
+    flex: 0 0 110px;
+    height: 65px;
+  }
+
+  .btn-seta {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+
+  .secao-detalhada, 
+  .secao-avaliacoes {
+    padding: 18px;
+    margin-top: 20px;
+  }
+
+  /* Requisitos de Sistema em uma coluna única */
+  .grid-requisitos {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  .toast-notificacao {
+    bottom: 16px;
+    right: 16px;
+    left: 16px;
+    text-align: center;
+  }
+}
+
+/* Telas Pequenas de Celular (Até 480px) */
+@media (max-width: 480px) {
+  .acoes-botoes {
+    flex-direction: row;
+  }
+
+  .btn-adicionar {
+    font-size: 0.85rem;
+    padding: 10px;
+  }
+
+  .preco-promo {
+    font-size: 1.5rem;
+  }
+
+  .modal-card {
+    max-width: 95%;
+  }
+
+  .modal-body {
+    padding: 16px;
+  }
+
+  .seletor-estrelas-botoes {
+    justify-content: space-between;
+  }
+
+  .btn-estrela-opcao {
+    font-size: 1.3rem;
+  }
+}
