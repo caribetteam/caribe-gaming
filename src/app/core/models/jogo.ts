@@ -106,6 +106,8 @@ export interface Dlc {
 }
 
 
+
+
 export const CATALOGO: JogoCatalogo[] = [
   // ================= JOGOS COM SEQUÊNCIA (por franquia, em ordem) =================
 
@@ -149,26 +151,26 @@ export const CATALOGO: JogoCatalogo[] = [
 
   // --- Battlefield ---
   { appid: 1517290, nome: 'Battlefield™ 2042', plataformas: ['PC', 'PS'], generos: ['FPS', 'Guerra'], categorias: ['shooter', 'action'] },
-  { appid: 1237950, nome: 'Battlefield™ V', plataformas: ['PC', 'PS'], generos: ['FPS', 'Guerra'], categorias: ['shooter', 'action'] },
+  { appid: 1238810, nome: 'Battlefield™ V', plataformas: ['PC', 'PS'], generos: ['FPS', 'Guerra'], categorias: ['shooter', 'action'] },
 
   // --- BioShock ---
-  { appid: 409720, nome: 'BioShock™ Remastered', plataformas: ['PC', 'PS'], generos: ['FPS', 'Horror'], categorias: ['shooter', 'action'] },
+  { appid: 409710, nome: 'BioShock™ Remastered', plataformas: ['PC', 'PS'], generos: ['FPS', 'Horror'], categorias: ['shooter', 'action'] },
   { appid: 8870, nome: 'BioShock Infinite', plataformas: ['PC', 'PS'], generos: ['FPS', 'Ação'], categorias: ['shooter', 'action'] },
-  { appid: 40970, nome: 'BioShock™ 2 Remastered', plataformas: ['PC', 'PS'], generos: ['FPS', 'Horror'], categorias: ['shooter', 'action'] },
+  { appid: 409720, nome: 'BioShock™ 2 Remastered', plataformas: ['PC', 'PS'], generos: ['FPS', 'Horror'], categorias: ['shooter', 'action'] },
 
   // --- Blasphemous ---
   { appid: 774361, nome: 'Blasphemous', plataformas: ['PC', 'PS'], generos: ['Metroidvania', 'Souls-like'], categorias: ['action', 'indie'] },
-  { appid: 1659200, nome: 'Blasphemous 2', plataformas: ['PC', 'PS'], generos: ['Metroidvania', 'Souls-like'], categorias: ['action', 'indie'] },
+  { appid: 2114740, nome: 'Blasphemous 2', plataformas: ['PC', 'PS'], generos: ['Metroidvania', 'Souls-like'], categorias: ['action', 'indie'] },
 
   // --- Call of Duty ---
   { appid: 1985810, nome: 'Call of Duty®: Black Ops Cold War', plataformas: ['PC', 'PS'], generos: ['FPS', 'Tiro'], categorias: ['shooter', 'action'] },
-  { appid: 1938070, nome: 'Call of Duty®: Vanguard', plataformas: ['PC', 'PS'], generos: ['FPS', 'Tiro'], categorias: ['shooter', 'action'] },
-  { appid: 1938090, nome: 'Call of Duty®: Modern Warfare® II', plataformas: ['PC', 'PS'], generos: ['Tiro', 'FPS'], categorias: ['shooter', 'action'] },
+  { appid: 1985820, nome: 'Call of Duty®: Vanguard', plataformas: ['PC', 'PS'], generos: ['FPS', 'Tiro'], categorias: ['shooter', 'action'] },
+  { appid: 	10180, nome: 'Call of Duty®: Modern Warfare® II', plataformas: ['PC', 'PS'], generos: ['Tiro', 'FPS'], categorias: ['shooter', 'action'] },
   { appid: 2519060, nome: 'Call of Duty: Modern Warfare III', plataformas: ['PC', 'PS'], generos: ['Tiro', 'FPS'], categorias: ['shooter', 'action'] },
-  { appid: 2933620, nome: 'Call of Duty®: Black Ops 6', plataformas: ['PC', 'PS'], generos: ['FPS', 'Tiro'], categorias: ['shooter', 'action'] },
+  { appid: 4384550, nome: 'Call of Duty®: Black Ops 6', plataformas: ['PC', 'PS'], generos: ['FPS', 'Tiro'], categorias: ['shooter', 'action'] },
 
   // --- Car Mechanic ---
-  { appid: 1210320, nome: 'Car Mechanic Simulator 2021', plataformas: ['PC', 'PS'], generos: ['Simulação'], categorias: ['simulation'] },
+  { appid: 1190000, nome: 'Car Mechanic Simulator 2021', plataformas: ['PC', 'PS'], generos: ['Simulação'], categorias: ['simulation'] },
   { appid: 645630, nome: 'Car Mechanic Simulator 2018', plataformas: ['PC', 'PS'], generos: ['Simulação'], categorias: ['simulation'] },
 
   // --- Cities: Skylines ---
@@ -176,8 +178,8 @@ export const CATALOGO: JogoCatalogo[] = [
   { appid: 949230, nome: 'Cities: Skylines II', plataformas: ['PC'], generos: ['Simulação', 'Construção'], categorias: ['simulation', 'strategy'] },
 
   // --- Conan ---
-  { appid: 593030, nome: 'Conan Exiles', plataformas: ['PC', 'PS'], generos: ['Sobrevivência', 'Mundo Aberto'], categorias: ['action', 'role-playing-rpg'] },
-  { appid: 440900, nome: 'Conan Unconquered', plataformas: ['PC'], generos: ['Estratégia', 'RTS'], categorias: ['strategy'] },
+  { appid: 	440900, nome: 'Conan Exiles', plataformas: ['PC', 'PS'], generos: ['Sobrevivência', 'Mundo Aberto'], categorias: ['action', 'role-playing-rpg'] },
+  { appid:  593030, nome: 'Conan Unconquered', plataformas: ['PC'], generos: ['Estratégia', 'RTS'], categorias: ['strategy'] },
 
   // --- Counter-Strike ---
   { appid: 240, nome: 'Counter-Strike: Source', plataformas: ['PC'], generos: ['FPS', 'Tático'], categorias: ['shooter', 'action'] },
@@ -186,7 +188,6 @@ export const CATALOGO: JogoCatalogo[] = [
 
   // --- Crusader Kings / Paradox ---
   { appid: 281990, nome: 'Stellaris', plataformas: ['PC'], generos: ['Estratégia', 'Sci-Fi'], categorias: ['strategy'] },
-  { appid: 236870, nome: 'Europa Universalis IV: Extreme Edition', plataformas: ['PC'], generos: ['Estratégia'], categorias: ['strategy'] },
   { appid: 1158310, nome: 'Crusader Kings III', plataformas: ['PC', 'PS'], generos: ['Estratégia', 'RPG'], categorias: ['strategy', 'simulation'] },
   { appid: 394360, nome: 'Hearts of Iron IV', plataformas: ['PC'], generos: ['Estratégia', 'Guerra'], categorias: ['strategy'] },
   { appid: 236850, nome: 'Europa Universalis IV', plataformas: ['PC'], generos: ['Estratégia'], categorias: ['strategy'] },
@@ -198,13 +199,13 @@ export const CATALOGO: JogoCatalogo[] = [
   { appid: 374320, nome: 'DARK SOULS™ III', plataformas: ['PC', 'PS'], generos: ['RPG', 'Souls-like'], categorias: ['role-playing-rpg', 'action'] },
 
   // --- Dead Island ---
-  { appid: 915810, nome: 'Dead Island Definitive Edition', plataformas: ['PC', 'PS'], generos: ['Ação', 'Zumbis'], categorias: ['action', 'adventure'] },
-  { appid: 1544020, nome: 'Dead Island 2', plataformas: ['PC', 'PS'], generos: ['Ação', 'Zumbis'], categorias: ['action', 'adventure'] },
+  { appid: 383150, nome: 'Dead Island Definitive Edition', plataformas: ['PC', 'PS'], generos: ['Ação', 'Zumbis'], categorias: ['action', 'adventure'] },
+  { appid: 934700, nome: 'Dead Island 2', plataformas: ['PC', 'PS'], generos: ['Ação', 'Zumbis'], categorias: ['action', 'adventure'] },
 
   // --- Dead Rising ---
-  { appid: 455860, nome: 'Dead Rising Deluxe Remaster', plataformas: ['PC', 'PS'], generos: ['Ação', 'Zumbis'], categorias: ['action'] },
-  { appid: 211310, nome: 'Dead Rising 3 Apocalypse Edition', plataformas: ['PC'], generos: ['Ação', 'Zumbis'], categorias: ['action'] },
-  { appid: 427270, nome: 'Dead Rising 4', plataformas: ['PC', 'PS'], generos: ['Ação', 'Zumbis'], categorias: ['action'] },
+  { appid: 2527390, nome: 'Dead Rising Deluxe Remaster', plataformas: ['PC', 'PS'], generos: ['Ação', 'Zumbis'], categorias: ['action'] },
+  { appid: 265550, nome: 'Dead Rising 3 Apocalypse Edition', plataformas: ['PC'], generos: ['Ação', 'Zumbis'], categorias: ['action'] },
+  { appid: 543460, nome: 'Dead Rising 4', plataformas: ['PC', 'PS'], generos: ['Ação', 'Zumbis'], categorias: ['action'] },
 
   // --- Death Stranding ---
   { appid: 1850570, nome: 'DEATH STRANDING DIRECTOR\'S CUT', plataformas: ['PC', 'PS'], generos: ['Ação', 'Aventura'], categorias: ['action', 'adventure'] },
@@ -216,23 +217,23 @@ export const CATALOGO: JogoCatalogo[] = [
 
   // --- Deus Ex ---
   { appid: 6910, nome: 'Deus Ex: Game of the Year Edition', plataformas: ['PC'], generos: ['RPG', 'Cyberpunk'], categorias: ['role-playing-rpg', 'action'] },
-  { appid: 28050, nome: 'Deus Ex: Human Revolution - Director\'s Cut', plataformas: ['PC'], generos: ['RPG', 'Cyberpunk'], categorias: ['role-playing-rpg', 'action'] },
+  { appid: 238960, nome: 'Deus Ex: Human Revolution - Director\'s Cut', plataformas: ['PC'], generos: ['RPG', 'Cyberpunk'], categorias: ['role-playing-rpg', 'action'] },
   { appid: 337000, nome: 'Deus Ex: Mankind Divided', plataformas: ['PC', 'PS'], generos: ['RPG', 'Cyberpunk'], categorias: ['role-playing-rpg', 'action'] },
   { appid: 238010, nome: 'Deus Ex: The Fall', plataformas: ['PC'], generos: ['RPG', 'Cyberpunk'], categorias: ['role-playing-rpg'] },
 
   // --- DiRT / GRID / WRC ---
-  { appid: 310560, nome: 'Dirt Rally', plataformas: ['PC'], generos: ['Corrida', 'Simulação'], categorias: ['racing', 'simulation'] },
-  { appid: 254440, nome: 'GRID Autosport', plataformas: ['PC'], generos: ['Corrida'], categorias: ['racing'] },
-  { appid: 703860, nome: 'GRID (2019)', plataformas: ['PC', 'PS'], generos: ['Corrida'], categorias: ['racing'] },
-  { appid: 1149560, nome: 'GRID Legends', plataformas: ['PC', 'PS'], generos: ['Corrida'], categorias: ['racing'] },
-  { appid: 690790, nome: 'DiRT Rally 2.0', plataformas: ['PC', 'PS'], generos: ['Corrida', 'Simulação'], categorias: ['racing', 'simulation'] },
+  { appid: 310560, nome: 'Dirt Rally', plataformas: ['PC'], generos: ['Corrida', 'Simulação'], categorias: ['racing', 'simulation'], estoque:false },
+ // { appid: 254440, nome: 'GRID Autosport', plataformas: ['PC'], generos: ['Corrida'], categorias: ['racing'] },
+  { appid: 703860, nome: 'GRID (2019)', plataformas: ['PC', 'PS'], generos: ['Corrida'], categorias: ['racing'], estoque:false },
+  { appid: 1149560, nome: 'GRID Legends', plataformas: ['PC', 'PS'], generos: ['Corrida'], categorias: ['racing'], estoque:false },
+  { appid: 690790, nome: 'DiRT Rally 2.0', plataformas: ['PC', 'PS'], generos: ['Corrida', 'Simulação'], categorias: ['racing', 'simulation'], estoque:false },
 
   // --- Dishonored ---
   { appid: 205100, nome: 'Dishonored', plataformas: ['PC', 'PS'], generos: ['Ação', 'Stealth'], categorias: ['action', 'adventure'] },
   { appid: 403640, nome: 'Dishonored 2', plataformas: ['PC', 'PS'], generos: ['Ação', 'Stealth'], categorias: ['action', 'adventure'] },
 
   // --- Divinity ---
-  { appid: 323370, nome: 'Divinity: Original Sin - Enhanced Edition', plataformas: ['PC', 'PS'], generos: ['RPG', 'Turnos'], categorias: ['role-playing-rpg', 'strategy'] },
+  { appid: 373420, nome: 'Divinity: Original Sin - Enhanced Edition', plataformas: ['PC', 'PS'], generos: ['RPG', 'Turnos'], categorias: ['role-playing-rpg', 'strategy'] },
   { appid: 435150, nome: 'Divinity: Original Sin 2 - Definitive Edition', plataformas: ['PC', 'PS'], generos: ['RPG', 'Turnos'], categorias: ['role-playing-rpg', 'strategy'] },
 
   // --- DOOM / Quake ---
@@ -244,15 +245,14 @@ export const CATALOGO: JogoCatalogo[] = [
   { appid: 2310, nome: 'Quake III Arena', plataformas: ['PC'], generos: ['FPS', 'Arena'], categorias: ['shooter', 'action'] },
 
   // --- Dragon Age ---
-  { appid: 205650, nome: 'Dragon Age: Origins - Ultimate Edition', plataformas: ['PC'], generos: ['RPG', 'Fantasia'], categorias: ['role-playing-rpg'] },
+  { appid: 47810, nome: 'Dragon Age: Origins - Ultimate Edition', plataformas: ['PC'], generos: ['RPG', 'Fantasia'], categorias: ['role-playing-rpg'] },
   { appid: 1222690, nome: 'Dragon Age™ Inquisition', plataformas: ['PC', 'PS'], generos: ['RPG', 'Ação'], categorias: ['role-playing-rpg', 'action'] },
   { appid: 1845910, nome: 'Dragon Age™: The Veilguard', plataformas: ['PC', 'PS'], generos: ['RPG', 'Ação'], categorias: ['role-playing-rpg', 'action'] },
-  { appid: 47810, nome: 'Dragon Age II', plataformas: ['PC'], generos: ['RPG', 'Ação'], categorias: ['role-playing-rpg', 'action'] },
 
   // --- Dragon Ball ---
   { appid: 678950, nome: 'Dragon Ball FighterZ', plataformas: ['PC', 'PS'], generos: ['Luta', 'Anime'], categorias: ['action'] },
   { appid: 1790600, nome: 'DRAGON BALL: Sparking! ZERO', plataformas: ['PC', 'PS'], generos: ['Luta', 'Anime'], categorias: ['action'] },
-  { appid: 2133080, nome: 'Dragon Ball Z: Kakarot', plataformas: ['PC', 'PS'], generos: ['RPG', 'Anime'], categorias: ['role-playing-rpg', 'action'] },
+  { appid: 851850, nome: 'Dragon Ball Z: Kakarot', plataformas: ['PC', 'PS'], generos: ['RPG', 'Anime'], categorias: ['role-playing-rpg', 'action'] },
   { appid: 323470, nome: 'DRAGON BALL XENOVERSE', plataformas: ['PC', 'PS'], generos: ['Luta', 'Anime'], categorias: ['action'] },
   { appid: 454650, nome: 'DRAGON BALL XENOVERSE 2', plataformas: ['PC', 'PS'], generos: ['Luta', 'Anime'], categorias: ['action'] },
 
@@ -262,9 +262,6 @@ export const CATALOGO: JogoCatalogo[] = [
 
   // --- EA SPORTS FC / FIFA ---
   { appid: 1849250, nome: 'EA SPORTS™ WRC', plataformas: ['PC', 'PS'], generos: ['Corrida', 'Simulação'], categorias: ['racing', 'simulation'] },
-  { appid: 1506830, nome: 'EA SPORTS™ FIFA 23', plataformas: ['PC', 'PS'], generos: ['Esportes'], categorias: ['sport'] },
-  { appid: 2195250, nome: 'EA SPORTS FC™ 24', plataformas: ['PC', 'PS'], generos: ['Esportes'], categorias: ['sport'] },
-  { appid: 2669320, nome: 'EA SPORTS FC™ 25', plataformas: ['PC', 'PS'], generos: ['Esportes'], categorias: ['sport'] },
   { appid: 4080220, nome: 'EA SPORTS FC™ 27', plataformas: ['PC', 'PS'], generos: ['Esportes'], categorias: ['sport'] },
 
   // --- Fallout ---
@@ -275,19 +272,18 @@ export const CATALOGO: JogoCatalogo[] = [
 
   // --- Farming Simulator ---
   { appid: 1248130, nome: 'Farming Simulator 22', plataformas: ['PC', 'PS'], generos: ['Simulação'], categorias: ['simulation'] },
-  { appid: 2231380, nome: 'Farming Simulator 25', plataformas: ['PC', 'PS'], generos: ['Simulação'], categorias: ['simulation'] },
+  { appid: 2300320, nome: 'Farming Simulator 25', plataformas: ['PC', 'PS'], generos: ['Simulação'], categorias: ['simulation'] },
 
   // --- Final Fantasy ---
-  { appid: 280160, nome: 'Final Fantasy XIV: Endwalker (Jogo Base + Expansão)', plataformas: ['PC', 'PS'], generos: ['MMORPG'], categorias: ['role-playing-rpg'] },
-  { appid: 1493710, nome: 'Crisis Core –Final Fantasy VII– Reunion', plataformas: ['PC', 'PS'], generos: ['RPG', 'Ação'], categorias: ['role-playing-rpg', 'action'] },
-  { appid: 1144200, nome: 'Final Fantasy VII Remake Intergrade', plataformas: ['PC', 'PS'], generos: ['RPG', 'Ação'], categorias: ['role-playing-rpg', 'action'] },
+  
+  { appid: 1608070, nome: 'Crisis Core –Final Fantasy VII– Reunion', plataformas: ['PC', 'PS'], generos: ['RPG', 'Ação'], categorias: ['role-playing-rpg', 'action'] },
+  { appid: 1462040, nome: 'Final Fantasy VII Remake Intergrade', plataformas: ['PC', 'PS'], generos: ['RPG', 'Ação'], categorias: ['role-playing-rpg', 'action'] },
   { appid: 2909400, nome: 'Final Fantasy VII Rebirth', plataformas: ['PC', 'PS'], generos: ['RPG', 'Ação'], categorias: ['role-playing-rpg', 'action'] },
-  { appid: 1462040, nome: 'FINAL FANTASY VII EVER CRISIS', plataformas: ['PC'], generos: ['RPG'], categorias: ['role-playing-rpg'] },
   { appid: 637650, nome: 'FINAL FANTASY XV WINDOWS EDITION', plataformas: ['PC', 'PS'], generos: ['RPG', 'Mundo Aberto'], categorias: ['role-playing-rpg', 'action'] },
-  { appid: 2289650, nome: 'Final Fantasy XVI', plataformas: ['PC', 'PS'], generos: ['RPG', 'Ação'], categorias: ['role-playing-rpg', 'action'] },
+  { appid: 2515020, nome: 'Final Fantasy XVI', plataformas: ['PC', 'PS'], generos: ['RPG', 'Ação'], categorias: ['role-playing-rpg', 'action'] },
 
   // --- Forza ---
-  { appid: 1293830, nome: 'Forza Horizon 4', plataformas: ['PC'], generos: ['Corrida', 'Mundo Aberto'], categorias: ['racing', 'sport'] },
+  //{ appid: 1293830, nome: 'Forza Horizon 4', plataformas: ['PC'], generos: ['Corrida', 'Mundo Aberto'], categorias: ['racing', 'sport'] },
   { appid: 1551360, nome: 'Forza Horizon 5', plataformas: ['PC'], generos: ['Corrida', 'Mundo Aberto'], categorias: ['racing', 'sport'] },
 
   // --- Frostpunk ---
@@ -295,7 +291,7 @@ export const CATALOGO: JogoCatalogo[] = [
   { appid: 1601580, nome: 'Frostpunk 2', plataformas: ['PC', 'PS'], generos: ['Estratégia', 'Sobrevivência'], categorias: ['strategy', 'simulation'] },
 
   // --- Ghostrunner ---
-  { appid: 391760, nome: 'Ghostrunner', plataformas: ['PC', 'PS'], generos: ['Ação', 'Cyberpunk'], categorias: ['action', 'indie'] },
+  { appid: 1139900, nome: 'Ghostrunner', plataformas: ['PC', 'PS'], generos: ['Ação', 'Cyberpunk'], categorias: ['action', 'indie'] },
   { appid: 2144740, nome: 'Ghostrunner 2', plataformas: ['PC', 'PS'], generos: ['Ação', 'Cyberpunk'], categorias: ['action', 'indie'] },
 
   // --- God of War ---
@@ -325,7 +321,7 @@ export const CATALOGO: JogoCatalogo[] = [
   // --- Hotline Miami ---
   { appid: 219150, nome: 'Hotline Miami', plataformas: ['PC', 'PS'], generos: ['Ação', 'Indie'], categorias: ['action', 'indie'] },
   { appid: 233450, nome: 'Hotline Miami (Special Edition)', plataformas: ['PC'], generos: ['Ação', 'Indie'], categorias: ['action', 'indie'] },
-  { appid: 274190, nome: 'Hotline Miami 2: Wrong Number', plataformas: ['PC', 'PS'], generos: ['Ação', 'Indie'], categorias: ['action', 'indie'] },
+  { appid: 274170, nome: 'Hotline Miami 2: Wrong Number', plataformas: ['PC', 'PS'], generos: ['Ação', 'Indie'], categorias: ['action', 'indie'] },
 
   // --- House Flipper ---
   { appid: 613100, nome: 'House Flipper', plataformas: ['PC', 'PS'], generos: ['Simulação', 'Casual'], categorias: ['simulation', 'casual'] },
@@ -352,10 +348,9 @@ export const CATALOGO: JogoCatalogo[] = [
   { appid: 1392860, nome: 'Little Nightmares III', plataformas: ['PC', 'PS'], generos: ['Plataforma', 'Horror'], categorias: ['platform', 'indie'] },
 
   // --- Mass Effect ---
-  { appid: 17420, nome: 'Mass Effect 1 (Classic)', plataformas: ['PC'], generos: ['RPG', 'Sci-Fi'], categorias: ['role-playing-rpg', 'action'] },
   { appid: 1328670, nome: 'Mass Effect™ Legendary Edition', plataformas: ['PC', 'PS'], generos: ['RPG', 'Sci-Fi'], categorias: ['role-playing-rpg', 'action'] },
   { appid: 1238000, nome: 'Mass Effect™ Andromeda', plataformas: ['PC', 'PS'], generos: ['RPG', 'Sci-Fi'], categorias: ['role-playing-rpg', 'action'] },
-  { appid: 236250, nome: 'Mass Effect 2 (Classic)', plataformas: ['PC'], generos: ['RPG', 'Sci-Fi'], categorias: ['role-playing-rpg', 'action'] },
+  { appid: 2362420, nome: 'Mass Effect 2 (2010 Edition)', plataformas: ['PC'], generos: ['RPG', 'Sci-Fi'], categorias: ['role-playing-rpg', 'action'] },
 
   // --- Max Payne ---
   { appid: 12150, nome: 'Max Payne', plataformas: ['PC'], generos: ['Ação', 'Tiro'], categorias: ['action', 'shooter'] },
@@ -435,7 +430,7 @@ export const CATALOGO: JogoCatalogo[] = [
 
   // --- Remnant ---
   { appid: 617290, nome: 'Remnant: From the Ashes', plataformas: ['PC', 'PS'], generos: ['Ação', 'Souls-like'], categorias: ['action', 'role-playing-rpg'] },
-  { appid: 1153200, nome: 'Dissection / Remnant II', plataformas: ['PC', 'PS'], generos: ['Ação', 'Souls-like'], categorias: ['action', 'role-playing-rpg'] },
+  { appid: 1282100, nome: 'Dissection / Remnant II', plataformas: ['PC', 'PS'], generos: ['Ação', 'Souls-like'], categorias: ['action', 'role-playing-rpg'] },
 
   // --- Resident Evil ---
   { appid: 1196590, nome: 'Resident Evil Village', plataformas: ['PC', 'PS'], generos: ['Survival Horror', 'FPS'], categorias: ['action', 'shooter'] },
@@ -444,7 +439,7 @@ export const CATALOGO: JogoCatalogo[] = [
 
   // --- Risen / Gothic ---
   { appid: 40300, nome: 'Risen', plataformas: ['PC'], generos: ['RPG'], categorias: ['role-playing-rpg'] },
-  { appid: 39540, nome: 'Gothic II: Gold Edition', plataformas: ['PC'], generos: ['RPG'], categorias: ['role-playing-rpg'] },
+  { appid: 39510, nome: 'Gothic II: Gold Edition', plataformas: ['PC'], generos: ['RPG'], categorias: ['role-playing-rpg'] },
   { appid: 57700, nome: 'Risen 2: Dark Waters', plataformas: ['PC'], generos: ['RPG'], categorias: ['role-playing-rpg'] },
   { appid: 249230, nome: 'Risen 3 - Titan Lords', plataformas: ['PC'], generos: ['RPG'], categorias: ['role-playing-rpg'] },
   { appid: 39500, nome: 'Gothic 3', plataformas: ['PC'], generos: ['RPG'], categorias: ['role-playing-rpg'] },
@@ -479,7 +474,7 @@ export const CATALOGO: JogoCatalogo[] = [
   { appid: 1774580, nome: 'STAR WARS Jedi: Survivor™', plataformas: ['PC', 'PS'], generos: ['Ação', 'Aventura'], categorias: ['action', 'adventure'] },
   { appid: 32470, nome: 'STAR WARS™ Empire at War - Gold Pack', plataformas: ['PC'], generos: ['Estratégia', 'RTS'], categorias: ['strategy'] },
   { appid: 1237930, nome: 'STAR WARS™ Battlefront™', plataformas: ['PC', 'PS'], generos: ['FPS', 'Sci-Fi'], categorias: ['shooter', 'action'] },
-  { appid: 1188700, nome: 'STAR WARS™: Squadrons', plataformas: ['PC', 'PS'], generos: ['Simulação', 'Espacial'], categorias: ['simulation', 'action'] },
+  { appid: 1222730, nome: 'STAR WARS™: Squadrons', plataformas: ['PC', 'PS'], generos: ['Simulação', 'Espacial'], categorias: ['simulation', 'action'] },
   { appid: 6060, nome: 'STAR WARS™ Battlefront II (Classic, 2005)', plataformas: ['PC'], generos: ['FPS', 'Sci-Fi'], categorias: ['shooter', 'action'] },
   { appid: 1237940, nome: 'STAR WARS™ Battlefront™ II', plataformas: ['PC', 'PS'], generos: ['FPS', 'Sci-Fi'], categorias: ['shooter', 'action'] },
 
@@ -514,7 +509,7 @@ export const CATALOGO: JogoCatalogo[] = [
 
   // --- The Talos Principle ---
   { appid: 257510, nome: 'The Talos Principle', plataformas: ['PC', 'PS'], generos: ['Puzzle', 'Primeira Pessoa'], categorias: ['indie', 'adventure'] },
-  { appid: 1920960, nome: 'The Talos Principle 2', plataformas: ['PC', 'PS'], generos: ['Puzzle', 'Primeira Pessoa'], categorias: ['indie', 'adventure'] },
+ 
 
   // --- The Witcher ---
   { appid: 20920, nome: 'The Witcher: Enhanced Edition Director\'s Cut', plataformas: ['PC'], generos: ['RPG'], categorias: ['role-playing-rpg'] },
@@ -526,7 +521,7 @@ export const CATALOGO: JogoCatalogo[] = [
   { appid: 460930, nome: 'Tom Clancy\'s Ghost Recon® Wildlands', plataformas: ['PC', 'PS'], generos: ['Tiro', 'Mundo Aberto'], categorias: ['shooter', 'action'] },
 
   // --- Tomb Raider ---
-  { appid: 247060, nome: 'Tomb Raider', plataformas: ['PC', 'PS'], generos: ['Ação', 'Aventura'], categorias: ['action', 'adventure'] },
+  { appid: 224960, nome: 'Tomb Raider', plataformas: ['PC', 'PS'], generos: ['Ação', 'Aventura'], categorias: ['action', 'adventure'] },
   { appid: 391220, nome: 'Rise of the Tomb Raider', plataformas: ['PC', 'PS'], generos: ['Ação', 'Aventura'], categorias: ['action', 'adventure'] },
   { appid: 750920, nome: 'Shadow of the Tomb Raider Definitive Edition', plataformas: ['PC', 'PS'], generos: ['Ação', 'Aventura'], categorias: ['action', 'adventure'] },
 
@@ -563,11 +558,11 @@ export const CATALOGO: JogoCatalogo[] = [
   { appid: 1235140, nome: 'Yakuza: Like a Dragon', plataformas: ['PC', 'PS'], generos: ['RPG', 'Turnos'], categorias: ['role-playing-rpg', 'action'] },
   { appid: 2072450, nome: 'Like a Dragon: Infinite Wealth', plataformas: ['PC', 'PS'], generos: ['RPG', 'Turnos'], categorias: ['role-playing-rpg', 'action'] },
   { appid: 1805480, nome: 'Like a Dragon: Ishin!', plataformas: ['PC', 'PS'], generos: ['Ação', 'Aventura'], categorias: ['action', 'adventure'] },
-  { appid: 1283970, nome: 'Yakuza Kiwami', plataformas: ['PC', 'PS'], generos: ['Ação', 'Aventura'], categorias: ['action', 'adventure'] },
-  { appid: 927380, nome: 'Yakuza Kiwami 2', plataformas: ['PC', 'PS'], generos: ['Ação', 'Aventura'], categorias: ['action', 'adventure'] },
+  { appid: 3717330, nome: 'Yakuza Kiwami', plataformas: ['PC', 'PS'], generos: ['Ação', 'Aventura'], categorias: ['action', 'adventure'] },
+  { appid: 3717340, nome: 'Yakuza Kiwami 2', plataformas: ['PC', 'PS'], generos: ['Ação', 'Aventura'], categorias: ['action', 'adventure'] },
   { appid: 1088710, nome: 'Yakuza 3 Remastered', plataformas: ['PC', 'PS'], generos: ['Ação', 'Aventura'], categorias: ['action', 'adventure'] },
-  { appid: 1088720, nome: 'Yakuza 4 Remastered', plataformas: ['PC', 'PS'], generos: ['Ação', 'Aventura'], categorias: ['action', 'adventure'] },
-  { appid: 1088730, nome: 'Yakuza 5 Remastered', plataformas: ['PC', 'PS'], generos: ['Ação', 'Aventura'], categorias: ['action', 'adventure'] },
+  { appid: 1105500, nome: 'Yakuza 4 Remastered', plataformas: ['PC', 'PS'], generos: ['Ação', 'Aventura'], categorias: ['action', 'adventure'] },
+  { appid: 1105510, nome: 'Yakuza 5 Remastered', plataformas: ['PC', 'PS'], generos: ['Ação', 'Aventura'], categorias: ['action', 'adventure'] },
   { appid: 1388590, nome: 'Yakuza 6: The Song of Life', plataformas: ['PC', 'PS'], generos: ['Ação', 'Aventura'], categorias: ['action', 'adventure'] },
 
   // ================= JOGOS ÚNICOS =================
@@ -581,13 +576,13 @@ export const CATALOGO: JogoCatalogo[] = [
   { appid: 2379780, nome: 'Balatro', plataformas: ['PC', 'PS'], generos: ['Roguelike', 'Cartas'], categorias: ['indie', 'casual'] },
   { appid: 1086940, nome: 'Baldur\'s Gate 3', plataformas: ['PC', 'PS'], generos: ['RPG', 'Estratégia'], categorias: ['role-playing-rpg', 'strategy'] },
   { appid: 2358720, nome: 'Black Myth: Wukong', plataformas: ['PC', 'PS'], generos: ['Ação', 'RPG'], categorias: ['action', 'role-playing-rpg'] },
-  { appid: 1013140, nome: 'Bloodstained: Ritual of the Night', plataformas: ['PC', 'PS'], generos: ['Metroidvania', 'Ação'], categorias: ['action', 'indie'] },
+  { appid: 692850, nome: 'Bloodstained: Ritual of the Night', plataformas: ['PC', 'PS'], generos: ['Metroidvania', 'Ação'], categorias: ['action', 'indie'] },
   { appid: 26800, nome: 'Braid', plataformas: ['PC'], generos: ['Puzzle', 'Plataforma'], categorias: ['indie', 'platform'] },
-  { appid: 1971800, nome: 'Braid Anniversary Edition', plataformas: ['PC', 'PS'], generos: ['Puzzle', 'Plataforma'], categorias: ['indie', 'platform'] },
-  { appid: 1324350, nome: 'Bramble: The Mountain King', plataformas: ['PC', 'PS'], generos: ['Aventura', 'Horror'], categorias: ['adventure', 'indie'] },
-  { appid: 225600, nome: 'Broforce', plataformas: ['PC', 'PS'], generos: ['Ação', 'Plataforma'], categorias: ['action', 'indie'] },
+  { appid: 499180, nome: 'Braid Anniversary Edition', plataformas: ['PC', 'PS'], generos: ['Puzzle', 'Plataforma'], categorias: ['indie', 'platform'] },
+  { appid: 1623940, nome: 'Bramble: The Mountain King', plataformas: ['PC', 'PS'], generos: ['Aventura', 'Horror'], categorias: ['adventure', 'indie'] },
+  { appid: 274190, nome: 'Broforce', plataformas: ['PC', 'PS'], generos: ['Ação', 'Plataforma'], categorias: ['action', 'indie'] },
   { appid: 1942280, nome: 'Brotato', plataformas: ['PC'], generos: ['Roguelike', 'Casual'], categorias: ['indie', 'action'] },
-  { appid: 42700, nome: 'Call of Juarez: Gunslinger', plataformas: ['PC'], generos: ['FPS', 'Faroeste'], categorias: ['shooter', 'action'] },
+  { appid: 204450, nome: 'Call of Juarez: Gunslinger', plataformas: ['PC'], generos: ['FPS', 'Faroeste'], categorias: ['shooter', 'action'] },
   { appid: 204360, nome: 'Castle Crashers®', plataformas: ['PC', 'PS'], generos: ['Beat em up', 'Cooperação'], categorias: ['action', 'indie'] },
   { appid: 1466860, nome: 'Castlevania Dominus Collection', plataformas: ['PC', 'PS'], generos: ['Metroidvania', 'Ação'], categorias: ['action', 'adventure'] },
   { appid: 504230, nome: 'Celeste', plataformas: ['PC', 'PS'], generos: ['Plataforma', 'Indie'], categorias: ['platform', 'indie'] },
@@ -611,7 +606,7 @@ export const CATALOGO: JogoCatalogo[] = [
   { appid: 601150, nome: 'Devil May Cry 5', plataformas: ['PC', 'PS'], generos: ['Hack and Slash', 'Ação'], categorias: ['action'] },
   { appid: 322330, nome: 'Don\'t Starve Together', plataformas: ['PC', 'PS'], generos: ['Sobrevivência', 'Indie'], categorias: ['indie', 'adventure'] },
   { appid: 2054970, nome: 'Dragon\'s Dogma 2', plataformas: ['PC', 'PS'], generos: ['RPG', 'Ação'], categorias: ['role-playing-rpg', 'action'] },
-  { appid: 1569040, nome: 'DREDGE', plataformas: ['PC', 'PS'], generos: ['Pesca', 'Horror'], categorias: ['indie', 'adventure'] },
+  { appid: 1562430, nome: 'DREDGE', plataformas: ['PC', 'PS'], generos: ['Pesca', 'Horror'], categorias: ['indie', 'adventure'] },
   { appid: 236090, nome: 'Dust: An Elysian Tail', plataformas: ['PC', 'PS'], generos: ['Metroidvania', 'Ação'], categorias: ['action', 'indie'] },
   { appid: 1245620, nome: 'Elden Ring', plataformas: ['PC', 'PS'], generos: ['RPG', 'Souls-like'], categorias: ['role-playing-rpg', 'action'] },
   { appid: 383120, nome: 'Empyrion - Galactic Survival', plataformas: ['PC'], generos: ['Sobrevivência', 'Sci-Fi'], categorias: ['indie', 'simulation'] },
@@ -619,11 +614,11 @@ export const CATALOGO: JogoCatalogo[] = [
   { appid: 8500, nome: 'EVE Online (Edição Premium)', plataformas: ['PC'], generos: ['MMO', 'Sci-Fi'], categorias: ['role-playing-rpg', 'strategy'] },
   { appid: 3059520, nome: 'F1® 25', plataformas: ['PC', 'PS'], generos: ['Corrida'], categorias: ['racing', 'sport'] },
   { appid: 224760, nome: 'FEZ', plataformas: ['PC', 'PS'], generos: ['Puzzle', 'Plataforma'], categorias: ['platform', 'indie'] },
-  { appid: 327310, nome: 'Finding Paradise', plataformas: ['PC'], generos: ['História Interativa', 'Indie'], categorias: ['adventure', 'indie'] },
-  { appid: 1190000, nome: 'Gas Station Simulator', plataformas: ['PC', 'PS'], generos: ['Simulação', 'Gerenciamento'], categorias: ['simulation', 'indie'] },
-  { appid: 1361510, nome: 'Ghost of Tsushima DIRECTOR\'S CUT', plataformas: ['PC', 'PS'], generos: ['Ação', 'Mundo Aberto'], categorias: ['action', 'adventure'] },
+  { appid: 337340, nome: 'Finding Paradise', plataformas: ['PC'], generos: ['História Interativa', 'Indie'], categorias: ['adventure', 'indie'] },
+  { appid: 1149620, nome: 'Gas Station Simulator', plataformas: ['PC', 'PS'], generos: ['Simulação', 'Gerenciamento'], categorias: ['simulation', 'indie'] },
+  { appid: 2215430, nome: 'Ghost of Tsushima DIRECTOR\'S CUT', plataformas: ['PC', 'PS'], generos: ['Ação', 'Mundo Aberto'], categorias: ['action', 'adventure'] },
   { appid: 265930, nome: 'Goat Simulator', plataformas: ['PC', 'PS'], generos: ['Casual', 'Comédia'], categorias: ['casual', 'action'] },
-  { appid: 1785650, nome: 'Granblue Fantasy: Relink', plataformas: ['PC', 'PS'], generos: ['RPG', 'Ação'], categorias: ['role-playing-rpg', 'action'] },
+  { appid: 881020, nome: 'Granblue Fantasy: Relink', plataformas: ['PC', 'PS'], generos: ['RPG', 'Ação'], categorias: ['role-playing-rpg', 'action'] },
   { appid: 3240220, nome: 'Grand Theft Auto V', plataformas: ['PC', 'PS'], generos: ['Ação', 'Mundo Aberto'], categorias: ['action', 'adventure'] },
   { appid: 815370, nome: 'Green Hell', plataformas: ['PC', 'PS'], generos: ['Sobrevivência', 'Simulação'], categorias: ['adventure', 'indie'] },
   { appid: 252150, nome: 'Grim Dawn', plataformas: ['PC'], generos: ['RPG', 'Action RPG'], categorias: ['role-playing-rpg', 'action'] },
@@ -649,12 +644,12 @@ export const CATALOGO: JogoCatalogo[] = [
   { appid: 1250410, nome: 'Microsoft Flight Simulator', plataformas: ['PC'], generos: ['Simulação'], categorias: ['simulation'] },
   { appid: 2537590, nome: 'Microsoft Flight Simulator 2024', plataformas: ['PC'], generos: ['Simulação'], categorias: ['simulation'] },
   { appid: 241930, nome: 'Middle-earth™: Shadow of Mordor™', plataformas: ['PC', 'PS'], generos: ['Ação', 'Mundo Aberto'], categorias: ['action', 'adventure'] },
-  { appid: 593110, nome: 'Middle-earth™: Shadow of War™', plataformas: ['PC', 'PS'], generos: ['Ação', 'Mundo Aberto'], categorias: ['action', 'adventure'] },
+  { appid: 356190, nome: 'Middle-earth™: Shadow of War™', plataformas: ['PC', 'PS'], generos: ['Ação', 'Mundo Aberto'], categorias: ['action', 'adventure'] },
   { appid: 524220, nome: 'NieR:Automata™', plataformas: ['PC', 'PS'], generos: ['RPG', 'Ação'], categorias: ['role-playing-rpg', 'action'] },
   { appid: 275850, nome: 'No Man\'s Sky', plataformas: ['PC', 'PS'], generos: ['Mundo Aberto', 'Sci-Fi'], categorias: ['adventure', 'action'] },
   { appid: 1150690, nome: 'OMORI', plataformas: ['PC', 'PS'], generos: ['RPG', 'Horror Psicológico'], categorias: ['role-playing-rpg', 'indie'] },
   { appid: 264200, nome: 'OneShot', plataformas: ['PC'], generos: ['Puzzle', 'Aventura'], categorias: ['indie', 'adventure'] },
-  { appid: 1070560, nome: 'Outer Wilds', plataformas: ['PC', 'PS'], generos: ['Exploração', 'Mistério'], categorias: ['adventure', 'indie'] },
+  { appid: 753640, nome: 'Outer Wilds', plataformas: ['PC', 'PS'], generos: ['Exploração', 'Mistério'], categorias: ['adventure', 'indie'] },
   { appid: 794260, nome: 'Outward Definitive Edition', plataformas: ['PC', 'PS'], generos: ['RPG', 'Sobrevivência'], categorias: ['role-playing-rpg', 'adventure'] },
   { appid: 1547000, nome: 'Pacific Drive', plataformas: ['PC', 'PS'], generos: ['Sobrevivência', 'Condução'], categorias: ['indie', 'adventure'] },
   { appid: 1458140, nome: 'Pacific Drive: Deluxe Edition', plataformas: ['PC', 'PS'], generos: ['Sobrevivência'], categorias: ['adventure', 'indie'] },
@@ -666,9 +661,9 @@ export const CATALOGO: JogoCatalogo[] = [
   { appid: 578080, nome: 'PUBG: BATTLEGROUNDS (Premium/Legacy)', plataformas: ['PC', 'PS'], generos: ['Battle Royale', 'FPS'], categorias: ['shooter', 'action'] },
   { appid: 648800, nome: 'Raft', plataformas: ['PC'], generos: ['Sobrevivência', 'Construção'], categorias: ['adventure', 'indie'] },
   { appid: 92100, nome: 'RAGE', plataformas: ['PC'], generos: ['FPS', 'Pós-Apocalíptico'], categorias: ['shooter', 'action'] },
-  { appid: 1086000, nome: 'RAGE 2', plataformas: ['PC', 'PS'], generos: ['FPS', 'Mundo Aberto'], categorias: ['shooter', 'action'] },
+  { appid: 548570, nome: 'RAGE 2', plataformas: ['PC', 'PS'], generos: ['FPS', 'Mundo Aberto'], categorias: ['shooter', 'action'] },
   { appid: 1049590, nome: 'Ratchet & Clank: Rift Apart', plataformas: ['PC', 'PS'], generos: ['Ação', 'Plataforma'], categorias: ['action', 'platform'] },
-  { appid: 247230, nome: 'Rayman Legends', plataformas: ['PC', 'PS'], generos: ['Plataforma', 'Ação'], categorias: ['platform', 'family'] },
+  { appid: 242550, nome: 'Rayman Legends', plataformas: ['PC', 'PS'], generos: ['Plataforma', 'Ação'], categorias: ['platform', 'family'] },
   { appid: 1174180, nome: 'Red Dead Redemption 2', plataformas: ['PC', 'PS'], generos: ['Ação', 'Mundo Aberto'], categorias: ['action', 'adventure'] },
   { appid: 1649240, nome: 'Returnal', plataformas: ['PC', 'PS'], generos: ['Roguelike', 'FPS'], categorias: ['action', 'shooter'] },
   { appid: 294100, nome: 'RimWorld', plataformas: ['PC'], generos: ['Simulação', 'Estratégia'], categorias: ['simulation', 'strategy'] },
@@ -701,7 +696,7 @@ export const CATALOGO: JogoCatalogo[] = [
   { appid: 250900, nome: 'The Binding of Isaac: Rebirth', plataformas: ['PC', 'PS'], generos: ['Roguelike', 'Indie'], categorias: ['action', 'indie'] },
   { appid: 489830, nome: 'The Elder Scrolls V: Skyrim Special Edition', plataformas: ['PC', 'PS'], generos: ['RPG', 'Mundo Aberto'], categorias: ['role-playing-rpg', 'adventure'] },
   { appid: 242760, nome: 'The Forest', plataformas: ['PC'], generos: ['Sobrevivência', 'Horror'], categorias: ['adventure', 'indie'] },
-  { appid: 1659770, nome: 'The Quarry', plataformas: ['PC', 'PS'], generos: ['Horror', 'História Interativa'], categorias: ['adventure'] },
+  { appid: 1577120, nome: 'The Quarry', plataformas: ['PC', 'PS'], generos: ['Horror', 'História Interativa'], categorias: ['adventure'] },
   { appid: 1237970, nome: 'Titanfall® 2', plataformas: ['PC', 'PS'], generos: ['FPS', 'Sci-Fi'], categorias: ['shooter', 'action'] },
   { appid: 206440, nome: 'To the Moon', plataformas: ['PC'], generos: ['História Interativa', 'Indie'], categorias: ['adventure', 'indie'] },
   { appid: 1164940, nome: 'Trepang2', plataformas: ['PC', 'PS'], generos: ['FPS', 'Ação'], categorias: ['shooter', 'action'] },
@@ -715,7 +710,7 @@ export const CATALOGO: JogoCatalogo[] = [
   { appid: 431960, nome: 'Wallpaper Engine', plataformas: ['PC'], generos: ['Utilitário'], categorias: ['utility', 'casual'] },
   { appid: 501300, nome: 'What Remains of Edith Finch', plataformas: ['PC', 'PS'], generos: ['História Interativa'], categorias: ['adventure', 'indie'] },
   { appid: 1229240, nome: 'Wildmender', plataformas: ['PC', 'PS'], generos: ['Sobrevivência', 'Aventura'], categorias: ['adventure', 'indie'] },
-  { appid: 2125510, nome: 'Wizard of Legend 2', plataformas: ['PC'], generos: ['Roguelike', 'Ação'], categorias: ['action', 'indie'] },
+  { appid: 2193540, nome: 'Wizard of Legend 2', plataformas: ['PC'], generos: ['Roguelike', 'Ação'], categorias: ['action', 'indie'] },
   { appid: 268500, nome: 'XCOM® 2', plataformas: ['PC', 'PS'], generos: ['Estratégia', 'Turnos'], categorias: ['strategy'] },
   { appid: 200510, nome: 'XCOM: Enemy Unknown', plataformas: ['PC'], generos: ['Estratégia', 'Turnos'], categorias: ['strategy'] },
 ];
