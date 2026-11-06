@@ -90,7 +90,6 @@ export class Produtos implements OnInit {
 
   readonly faixasPreco = [
     { id: 'todos', nome: 'Todos' },
-    { id: 'gratis', nome: 'Grátis' },
     { id: '0-50', nome: 'Até R$50' },
     { id: '50-100', nome: 'R$50 – R$100' },
     { id: 'acima-100', nome: 'Acima de R$100' },
