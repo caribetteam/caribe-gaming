@@ -5,6 +5,7 @@ import {
   writeResponseToNodeResponse,
 } from '@angular/ssr/node';
 import express from 'express';
+import 'dotenv/config';
 import { join } from 'node:path';
 import { randomUUID, createHmac, timingSafeEqual } from 'node:crypto';
 import { PRECOS } from './server/catalogo-precos';
@@ -40,7 +41,10 @@ async function reconciliar(paymentId: string, accessToken: string) {
     if (pg.status === 'approved') {
       pedido.status = 'paid';
       pedido.paymentId = String(pg.id);
-    } else if ((pg.status === 'rejected' || pg.status === 'cancelled') && pedido.status === 'pending') {
+    } else if (
+      (pg.status === 'rejected' || pg.status === 'cancelled') &&
+      pedido.status === 'pending'
+    ) {
       pedido.status = 'failed';
     }
     return { id: pg.id as number, status: pg.status as string, externalReference: ref };
@@ -61,7 +65,12 @@ app.post('/api/mercado-pago/preference', async (req, res) => {
   const email = typeof corpo.payer?.email === 'string' ? corpo.payer.email.trim() : '';
   const entrada: unknown[] = Array.isArray(corpo.items) ? corpo.items : [];
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 || entrada.length === 0 || entrada.length > 50) {
+  if (
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
+    email.length > 254 ||
+    entrada.length === 0 ||
+    entrada.length > 50
+  ) {
     res.status(400).json({ error: 'Dados do pedido inválidos.' });
     return;
   }

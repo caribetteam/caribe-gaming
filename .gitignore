@@ -46,3 +46,4 @@ Thumbs.db
 # Segredos e variáveis de ambiente locais
 .env
 .env.*.local
+!.env.example
