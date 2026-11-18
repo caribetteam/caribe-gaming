@@ -12,6 +12,14 @@
     }
   },
   "rewrites": [
+    { "source": 
+      "/steam/:path*", 
+      "destination": "https://store.steampowered.com/:path*" 
+    },
+    { "source": 
+      "/webapi/:path*", 
+      "destination": "https://api.steampowered.com/:path*" 
+    },
     {
       "source": "/steam/:path*",
       "destination": "https://store.steampowered.com/:path*"

@@ -8,8 +8,8 @@ export type { DetalhesJogo};
 @Injectable({ providedIn: 'root' })
 export class RawgService {
   private http = inject(HttpClient);
-  private apiKey = '53cda31b968d4afea37f6db579e0ec8c';
-  private baseUrl = 'https://api.rawg.io/api';
+  private apiKey = '';
+  private baseUrl = '';
 
   obterGameRaw(jogoIdOuSlug: string | number): Observable<any> {
     return this.http.get<any>(`${this.baseUrl}/games/${jogoIdOuSlug}?key=${this.apiKey}`);

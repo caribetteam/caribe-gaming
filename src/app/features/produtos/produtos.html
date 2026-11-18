@@ -134,13 +134,38 @@
           >
             🗑️ Limpar Favoritos
           </button>
-          <span class="produtos-contador">{{ produtosExibidos.length }} jogos encontrados</span>
+          <span class="produtos-contador" *ngIf="!carregando && !erro">
+            {{ produtosExibidos.length }}
+            {{ produtosExibidos.length === 1 ? 'jogo encontrado' : 'jogos encontrados' }}
+          </span>
         </div>
       </div>
     </div>
 
+    <!-- Pesquisa vinda do menu -->
+    <div class="chip-busca" *ngIf="termoBusca">
+      <span>🔎 Resultados para <strong>“{{ termoBusca }}”</strong></span>
+      <button type="button" (click)="limparBusca()" aria-label="Limpar pesquisa">✕</button>
+    </div>
+
+    <!-- Carregando: barquinho navegando -->
+    <app-loader-barco
+      *ngIf="carregando"
+      texto="Procurando tesouros no catálogo"
+    ></app-loader-barco>
+
+    <!-- Erro ao carregar a lista -->
+    <div class="estado-erro-lista" *ngIf="erro && !carregando" role="alert">
+      <div class="erro-icone">🏴‍☠️</div>
+      <h3>Não conseguimos carregar os jogos</h3>
+      <p>A loja não respondeu agora. Verifique sua conexão e tente de novo.</p>
+      <button type="button" class="btn-carrinho btn-tentar" (click)="tentarNovamente()">
+        Tentar de novo
+      </button>
+    </div>
+
     <!-- 3. Cards de Produtos -->
-    <div class="grid-produtos" *ngIf="produtosExibidos.length > 0">
+    <div class="grid-produtos" *ngIf="!carregando && !erro && produtosExibidos.length > 0">
       <div *ngFor="let produto of produtosExibidos; trackBy: rastrear" class="card-produto">
         <div class="card-imagem" (click)="irParaPaginaDoJogo(produto)" style="cursor: pointer">
           <img
@@ -148,6 +173,7 @@
             [alt]="produto.nome"
             [style.object-position]="produto.imagemPosicao"
             [class.esgotado-img]="produto.estoque === false"
+            (load)="imagemCarregou($event, produto)"
             (error)="imagemFalhou($event, produto)"
           />
 
@@ -216,7 +242,10 @@
     </div>
 
     <!-- Estado vazio: favoritos -->
-    <div class="favoritos-vazio" *ngIf="abaAtiva === 'favoritos' && produtosExibidos.length === 0">
+    <div
+      class="favoritos-vazio"
+      *ngIf="abaAtiva === 'favoritos' && produtosExibidos.length === 0 && !termoBusca && !carregando"
+    >
       <p>Você ainda não favoritou nenhum jogo.</p>
       <button class="btn-carrinho" (click)="selecionarAba('todos')">Ver Jogos</button>
     </div>
@@ -224,10 +253,13 @@
     <!-- Estado vazio: filtros sem resultado -->
     <div
       class="favoritos-vazio"
-      *ngIf="abaAtiva === 'todos' && produtos.length > 0 && produtosExibidos.length === 0"
+      *ngIf="!carregando && !erro && produtos.length > 0 && produtosExibidos.length === 0 && (abaAtiva === 'todos' || termoBusca)"
     >
-      <p>Nenhum jogo encontrado com esses filtros.</p>
-      <button class="btn-carrinho" (click)="limparFiltros()">Limpar filtros</button>
+      <p *ngIf="termoBusca">Nenhum jogo encontrado para “{{ termoBusca }}”.</p>
+      <p *ngIf="!termoBusca">Nenhum jogo encontrado com esses filtros.</p>
+      <button class="btn-carrinho" (click)="limparTudo()">
+        {{ termoBusca ? 'Limpar pesquisa e filtros' : 'Limpar filtros' }}
+      </button>
     </div>
   </div>
 </div>

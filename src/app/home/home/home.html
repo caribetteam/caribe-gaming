@@ -1,79 +1,110 @@
 <app-header></app-header>
 
 <main class="main-container">
-  <section class="hero-banner">
-    <div class="hero-slide" (click)="irParaPaginaDoJogo(heroGames[activeHeroIndex])" style="cursor: pointer;">
-      <img
-        [src]="heroGames[activeHeroIndex].image"
-        [alt]="heroGames[activeHeroIndex].title"
-        class="hero-image"
-        fetchpriority="high"
-      />
-      <div class="hero-overlay"></div>
-    </div>
-
-    <button class="nav-arrow prev" (click)="prevHero()">&#10094;</button>
-    <button class="nav-arrow next" (click)="nextHero()">&#10095;</button>
-
-    <div class="hero-content">
-      <div class="hero-details">
-        <span class="badge">{{ heroGames[activeHeroIndex].badge }}</span>
-        <h1 class="hero-title" (click)="irParaPaginaDoJogo(heroGames[activeHeroIndex])" style="cursor: pointer;">{{ heroGames[activeHeroIndex].title }}</h1>
-        <p class="hero-subtitle">{{ heroGames[activeHeroIndex].subtitle }}</p>
-
-        <div class="price-action">
-          <span class="discount-tag">{{ heroGames[activeHeroIndex].discount }}</span>
-          <div class="prices">
-            <span class="old-price">{{ heroGames[activeHeroIndex].originalPrice }}</span>
-            <span class="promo-price">{{ heroGames[activeHeroIndex].promoPrice }}</span>
-          </div>
-          <button class="buy-btn" (click)="$event.stopPropagation(); comprarAgora(heroGames[activeHeroIndex])">
-            COMPRAR AGORA
-          </button>
+  @if (!carregado) {
+    <app-loader-barco texto="Procurando as melhores ofertas..."></app-loader-barco>
+  } @else {
+    @if (heroAtual; as hero) {
+      <section class="hero-banner">
+        <div class="hero-slide" (click)="irParaPaginaDoJogo(hero)" style="cursor: pointer">
+          @if (hero.image) {
+            <img
+              [src]="hero.image"
+              [alt]="hero.title"
+              class="hero-image"
+              fetchpriority="high"
+              (error)="bannerFalhou(hero.id)"
+            />
+          }
+          <div class="hero-overlay"></div>
         </div>
-      </div>
 
-      <div class="hero-indicators">
-        @for (game of heroGames; track game.id; let i = $index) {
-          <button
-            class="indicator-btn"
-            [class.active]="activeHeroIndex === i"
-            (click)="selectHero(i)"
-          >
-            <span>0{{ i + 1 }}</span>
-            <strong>{{ game.title }}</strong>
-          </button>
-        }
-      </div>
-    </div>
-  </section>
+        <button class="nav-arrow prev" (click)="prevHero()">&#10094;</button>
+        <button class="nav-arrow next" (click)="nextHero()">&#10095;</button>
 
-  <section class="offers-section">
-    <div class="offers-header">
-      <h2>🔥 Ofertas Especiais</h2>
-      <div class="offers-nav">
-        <button class="scroll-btn" (click)="scrollOffers(cardsContainer, 'left')">&#10094;</button>
-        <button class="scroll-btn" (click)="scrollOffers(cardsContainer, 'right')">&#10095;</button>
-      </div>
-    </div>
+        <div class="hero-content">
+          <div class="hero-details">
+            <span class="badge">{{ hero.badge }}</span>
+            <h1 class="hero-title" (click)="irParaPaginaDoJogo(hero)" style="cursor: pointer">
+              {{ hero.title }}
+            </h1>
+            <p class="hero-subtitle">{{ hero.subtitle }}</p>
 
-    <div #cardsContainer class="offers-grid">
-      @for (game of offerGames; track game.id) {
-        <div class="game-card" (click)="irParaPaginaDoJogo(game)" style="cursor: pointer;">
-          <div class="card-image-box">
-            <img [src]="game.image" [alt]="game.title" loading="lazy" decoding="async" />
-            <span class="card-discount">{{ game.discount }}</span>
-          </div>
-          <div class="card-info">
-            <h3 class="card-title">{{ game.title }}</h3>
-            <span class="card-publisher">{{ game.subtitle }}</span>
-            <div class="card-price-box">
-              <span class="card-old-price">{{ game.originalPrice }}</span>
-              <span class="card-promo-price">{{ game.promoPrice }}</span>
+            <div class="price-action">
+              @if (hero.discount) {
+                <span class="discount-tag">{{ hero.discount }}</span>
+              }
+              <div class="prices">
+                @if (hero.originalPrice) {
+                  <span class="old-price">{{ hero.originalPrice }}</span>
+                }
+                <span class="promo-price">{{ hero.promoPrice }}</span>
+              </div>
+              <button class="buy-btn" (click)="$event.stopPropagation(); comprarAgora(hero)">
+                COMPRAR AGORA
+              </button>
             </div>
           </div>
+
+          <div class="hero-indicators">
+            @for (game of heroGames; track game.id; let i = $index) {
+              <button
+                class="indicator-btn"
+                [class.active]="activeHeroIndex === i"
+                (click)="selectHero(i)"
+              >
+                <span>0{{ i + 1 }}</span>
+                <strong>{{ game.title }}</strong>
+              </button>
+            }
+          </div>
         </div>
-      }
-    </div>
-  </section>
+      </section>
+    }
+
+    @if (offerGames.length > 0) {
+      <section class="offers-section">
+        <div class="offers-header">
+          <h2>🔥 Ofertas Especiais</h2>
+          <div class="offers-nav">
+            <button class="scroll-btn" (click)="scrollOffers(cardsContainer, 'left')">
+              &#10094;
+            </button>
+            <button class="scroll-btn" (click)="scrollOffers(cardsContainer, 'right')">
+              &#10095;
+            </button>
+          </div>
+        </div>
+
+        <div #cardsContainer class="offers-grid">
+          @for (game of offerGames; track game.id) {
+            <div class="game-card" (click)="irParaPaginaDoJogo(game)" style="cursor: pointer">
+              <div class="card-image-box">
+                <img
+                  [src]="game.horizontal"
+                  [alt]="game.title"
+                  loading="lazy"
+                  decoding="async"
+                  (error)="imagemCardFalhou($event, game)"
+                />
+                @if (game.discount) {
+                  <span class="card-discount">{{ game.discount }}</span>
+                }
+              </div>
+              <div class="card-info">
+                <h3 class="card-title" [title]="game.title">{{ game.title }}</h3>
+                <span class="card-publisher">{{ game.subtitle }}</span>
+                <div class="card-price-box">
+                  @if (game.originalPrice) {
+                    <span class="card-old-price">{{ game.originalPrice }}</span>
+                  }
+                  <span class="card-promo-price">{{ game.promoPrice }}</span>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+    }
+  }
 </main>
