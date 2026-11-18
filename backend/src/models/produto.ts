@@ -28,10 +28,6 @@ const ProdutoSchema = new mongoose.Schema(
     imagem: {
       type: String,
     },
-    gratis: {
-      type: Boolean,
-      default: false,
-    },
     ativo: {
       type: Boolean,
       default: true,
