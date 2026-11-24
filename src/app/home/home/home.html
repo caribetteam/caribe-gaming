@@ -4,57 +4,79 @@
   @if (!carregado) {
     <app-loader-barco texto="Procurando as melhores ofertas..."></app-loader-barco>
   } @else {
-    @if (heroAtual; as hero) {
+    <!-- =====================================================================
+1. HERO BANNER PRINCIPAL (SWIPER EFFECT FADE)
+         ===================================================================== -->
+    @if (heroGames.length > 0) {
       <section class="hero-banner">
-        <div class="hero-slide" (click)="irParaPaginaDoJogo(hero)" style="cursor: pointer">
-          @if (hero.image) {
-            <img
-              [src]="hero.image"
-              [alt]="hero.title"
-              class="hero-image"
-              fetchpriority="high"
-              (error)="bannerFalhou(hero.id)"
-            />
-          }
-          <div class="hero-overlay"></div>
-        </div>
+        <div #heroSwiper class="swiper hero-swiper">
+          <div class="swiper-wrapper">
+            @for (hero of heroGames; track hero.id; let first = $first) {
+              <div class="swiper-slide hero-swiper-slide">
+                <div class="hero-slide" (click)="irParaPaginaDoJogo(hero)">
+                  @if (hero.image) {
+                    <img
+                      [src]="hero.image"
+                      [alt]="hero.title"
+                      class="hero-image"
+                      [attr.fetchpriority]="first ? 'high' : null"
+                      (error)="bannerFalhou(hero.id)"
+                    />
+                  }
+                  <div class="hero-overlay"></div>
+                </div>
 
-        <button class="nav-arrow prev" (click)="prevHero()">&#10094;</button>
-        <button class="nav-arrow next" (click)="nextHero()">&#10095;</button>
+                <div class="hero-content">
+                  <div class="hero-details">
+                    <span class="badge">{{ hero.badge }}</span>
+                    <h1 class="hero-title" (click)="irParaPaginaDoJogo(hero)">
+                      {{ hero.title }}
+                    </h1>
+                    <p class="hero-subtitle">{{ hero.subtitle }}</p>
 
-        <div class="hero-content">
-          <div class="hero-details">
-            <span class="badge">{{ hero.badge }}</span>
-            <h1 class="hero-title" (click)="irParaPaginaDoJogo(hero)" style="cursor: pointer">
-              {{ hero.title }}
-            </h1>
-            <p class="hero-subtitle">{{ hero.subtitle }}</p>
-
-            <div class="price-action">
-              @if (hero.discount) {
-                <span class="discount-tag">{{ hero.discount }}</span>
-              }
-              <div class="prices">
-                @if (hero.originalPrice) {
-                  <span class="old-price">{{ hero.originalPrice }}</span>
-                }
-                <span class="promo-price">{{ hero.promoPrice }}</span>
+                    <div class="price-action">
+                      @if (hero.discount) {
+                        <span class="discount-tag">{{ hero.discount }}</span>
+                      }
+                      <div class="prices">
+                        @if (hero.originalPrice) {
+                          <span class="old-price">{{ hero.originalPrice }}</span>
+                        }
+                        <span class="promo-price">{{ hero.promoPrice }}</span>
+                      </div>
+                      <button
+                        type="button"
+                        class="buy-btn"
+                        (click)="$event.stopPropagation(); comprarAgora(hero)"
+                      >
+                        COMPRAR AGORA
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <button class="buy-btn" (click)="$event.stopPropagation(); comprarAgora(hero)">
-                COMPRAR AGORA
-              </button>
-            </div>
+            }
           </div>
 
-          <div class="hero-indicators">
+          <div class="swiper-button-prev hero-swiper-prev" aria-label="Slide anterior"></div>
+          <div class="swiper-button-next hero-swiper-next" aria-label="Próximo slide"></div>
+          <div class="swiper-pagination hero-swiper-pagination"></div>
+        </div>
+
+        <div class="hero-indicators-overlay">
+          <div class="hero-indicators" role="tablist" aria-label="Destaques do banner">
             @for (game of heroGames; track game.id; let i = $index) {
               <button
+                type="button"
+                role="tab"
                 class="indicator-btn"
                 [class.active]="activeHeroIndex === i"
+                [attr.aria-selected]="activeHeroIndex === i"
+                [title]="game.title"
                 (click)="selectHero(i)"
               >
-                <span>0{{ i + 1 }}</span>
-                <strong>{{ game.title }}</strong>
+                <span class="indicator-num">0{{ i + 1 }}</span>
+                <strong class="indicator-title">{{ game.title }}</strong>
               </button>
             }
           </div>
@@ -62,49 +84,666 @@
       </section>
     }
 
-    @if (offerGames.length > 0) {
-      <section class="offers-section">
-        <div class="offers-header">
-          <h2>🔥 Ofertas Especiais</h2>
-          <div class="offers-nav">
-            <button class="scroll-btn" (click)="scrollOffers(cardsContainer, 'left')">
-              &#10094;
-            </button>
-            <button class="scroll-btn" (click)="scrollOffers(cardsContainer, 'right')">
-              &#10095;
-            </button>
+    <!-- =====================================================================
+2. FAIXA INTEGRADA DE DIFERENCIAIS DA LOJA
+         ===================================================================== -->
+    <section class="trust-strip-wrapper" aria-label="Vantagens Caribe's Gaming">
+      <div class="trust-strip">
+        <div class="trust-item">
+          <div class="trust-icon-box" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"
+              />
+            </svg>
+          </div>
+          <div class="trust-text">
+            <strong>Entrega Digital Imediata</strong>
+            <span>Chave liberada após aprovação</span>
           </div>
         </div>
 
-        <div #cardsContainer class="offers-grid">
-          @for (game of offerGames; track game.id) {
-            <div class="game-card" (click)="irParaPaginaDoJogo(game)" style="cursor: pointer">
-              <div class="card-image-box">
-                <img
-                  [src]="game.horizontal"
-                  [alt]="game.title"
-                  loading="lazy"
-                  decoding="async"
-                  (error)="imagemCardFalhou($event, game)"
-                />
-                @if (game.discount) {
-                  <span class="card-discount">{{ game.discount }}</span>
-                }
-              </div>
-              <div class="card-info">
-                <h3 class="card-title" [title]="game.title">{{ game.title }}</h3>
-                <span class="card-publisher">{{ game.subtitle }}</span>
+        <div class="trust-item">
+          <div class="trust-icon-box" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+              />
+              <path stroke-linecap="round" stroke-linejoin="round" d="m9 12 2 2 4-4" />
+            </svg>
+          </div>
+          <div class="trust-text">
+            <strong>Chaves 100% Originais</strong>
+            <span>Ativação oficial na Steam</span>
+          </div>
+        </div>
+
+        <div class="trust-item">
+          <div class="trust-icon-box" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="5" width="20" height="14" rx="2" />
+              <line x1="2" y1="10" x2="22" y2="10" />
+            </svg>
+          </div>
+          <div class="trust-text">
+            <strong>Pix & Cartão</strong>
+            <span>Pagamento rápido e protegido</span>
+          </div>
+        </div>
+
+        <div class="trust-item">
+          <div class="trust-icon-box" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 18v-6a9 9 0 0 1 18 0v6" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"
+              />
+            </svg>
+          </div>
+          <div class="trust-text">
+            <strong>Suporte Especializado</strong>
+            <span>Atendimento gamer dedicado</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+3. CARROSSEL: OFERTAS ESPECIAIS (EMBLA LOOP)
+         ===================================================================== -->
+    @if (offerGames.length > 0) {
+      <section class="carousel-section">
+        <div class="section-header">
+          <div class="section-title-group">
+            <h2>🔥 Ofertas Especiais</h2>
+            <span class="section-subtitle">Os maiores descontos disponíveis agora</span>
+          </div>
+          <div class="section-actions">
+            <a class="ver-todos-btn" routerLink="/jogos">Ver todos</a>
+            <div class="carousel-nav">
+              <button
+                type="button"
+                class="scroll-btn"
+                aria-label="Oferta anterior"
+                (click)="rolarOfertasEmbla('prev')"
+              >
+                &#10094;
+              </button>
+              <button
+                type="button"
+                class="scroll-btn"
+                aria-label="Próxima oferta"
+                (click)="rolarOfertasEmbla('next')"
+              >
+                &#10095;
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div #offersEmbla class="embla">
+          <div class="embla__viewport">
+            <div class="embla__container">
+              @for (game of offerGames; track game.id) {
+                <div class="embla__slide">
+                  <a
+                    class="game-card embla-game-card"
+                    [routerLink]="['/produto', game.slug]"
+                    (click)="aoClicarNoJogo(game)"
+                  >
+                    <div class="card-image-box">
+                      <img
+                        class="embla__slide__img"
+                        [src]="game.horizontal"
+                        [alt]="game.title"
+                        loading="lazy"
+                        decoding="async"
+                        (error)="imagemCardFalhou($event, game)"
+                      />
+                      @if (game.discount) {
+                        <span class="card-discount">{{ game.discount }}</span>
+                      }
+                      <span class="card-hover-pill">⚡ Entrega Imediata</span>
+                      <button
+                        type="button"
+                        class="quick-add-btn"
+                        [class.added]="adicionadoRecentemente.has(game.id)"
+                        [attr.aria-label]="
+                          adicionadoRecentemente.has(game.id)
+                            ? 'Adicionado ao carrinho: ' + game.title
+                            : 'Adicionar ao carrinho: ' + game.title
+                        "
+                        [title]="
+                          adicionadoRecentemente.has(game.id)
+                            ? 'Adicionado ao carrinho!'
+                            : 'Adicionar ao carrinho'
+                        "
+                        (click)="adicionarRapido($event, game)"
+                      >
+                        {{ adicionadoRecentemente.has(game.id) ? '✓' : '+' }}
+                      </button>
+                    </div>
+                    <div class="card-info">
+                      <h3 class="card-title" [title]="game.title">{{ game.title }}</h3>
+                      <span class="card-publisher">{{ game.subtitle }}</span>
+                      <div class="card-footer">
+                        <div class="card-price-box">
+                          @if (game.originalPrice) {
+                            <span class="card-old-price">{{ game.originalPrice }}</span>
+                          }
+                          <span class="card-promo-price">{{ game.promoPrice }}</span>
+                        </div>
+                        <span class="platform-tag">STEAM</span>
+                      </div>
+                    </div>
+                  </a>
+                </div>
+              }
+            </div>
+          </div>
+
+          @if (ofertasSnaps.length > 1) {
+            <div class="embla__dots" role="tablist" aria-label="Paginação de ofertas especiais">
+              @for (snapIndex of ofertasSnaps; track snapIndex) {
+                <button
+                  type="button"
+                  class="embla__dot"
+                  [class.embla__dot--selected]="ofertasSelectedIndex === snapIndex"
+                  [attr.aria-label]="'Ir para oferta ' + (snapIndex + 1)"
+                  [attr.aria-selected]="ofertasSelectedIndex === snapIndex"
+                  (click)="irParaOfertaSnap(snapIndex)"
+                ></button>
+              }
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- =====================================================================
+4. VITRINE COM ABAS INTERATIVAS (FILTRO INSTANTÂNEO)
+         ===================================================================== -->
+    <section class="tabs-showcase-section">
+      <div class="tabs-header">
+        <div class="tabs-pills" role="tablist" aria-label="Filtrar vitrine">
+          <button
+            type="button"
+            role="tab"
+            class="tab-pill"
+            [class.active]="abaAtiva === 'alta'"
+            [attr.aria-selected]="abaAtiva === 'alta'"
+            (click)="selecionarAba('alta')"
+          >
+            🚀 Em Alta
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="tab-pill"
+            [class.active]="abaAtiva === 'descontos'"
+            [attr.aria-selected]="abaAtiva === 'descontos'"
+            (click)="selecionarAba('descontos')"
+          >
+            🏷️ Maiores Descontos
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="tab-pill"
+            [class.active]="abaAtiva === 'acessiveis'"
+            [attr.aria-selected]="abaAtiva === 'acessiveis'"
+            (click)="selecionarAba('acessiveis')"
+          >
+            💸 Até R$ 60
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="tab-pill"
+            [class.active]="abaAtiva === 'gratis'"
+            [attr.aria-selected]="abaAtiva === 'gratis'"
+            (click)="selecionarAba('gratis')"
+          >
+            🎁 Gratuitos & Econômicos
+          </button>
+        </div>
+
+        <a class="ver-todos-btn" routerLink="/jogos">Explorar catálogo</a>
+      </div>
+
+      <div class="tabs-grid">
+        @for (game of jogosAbaAtual; track game.id) {
+          <a
+            class="game-card grid-card"
+            [routerLink]="['/produto', game.slug]"
+            (click)="aoClicarNoJogo(game)"
+          >
+            <div class="card-image-box">
+              <img
+                [src]="game.horizontal"
+                [alt]="game.title"
+                loading="lazy"
+                decoding="async"
+                (error)="imagemCardFalhou($event, game)"
+              />
+              @if (game.discount) {
+                <span class="card-discount">{{ game.discount }}</span>
+              }
+              <span class="card-hover-pill">⚡ Entrega Imediata</span>
+              <button
+                type="button"
+                class="quick-add-btn"
+                [class.added]="adicionadoRecentemente.has(game.id)"
+                [attr.aria-label]="'Adicionar ao carrinho: ' + game.title"
+                (click)="adicionarRapido($event, game)"
+              >
+                {{ adicionadoRecentemente.has(game.id) ? '✓' : '+' }}
+              </button>
+            </div>
+            <div class="card-info">
+              <h3 class="card-title" [title]="game.title">{{ game.title }}</h3>
+              <span class="card-publisher">{{ game.subtitle }}</span>
+              <div class="card-footer">
                 <div class="card-price-box">
                   @if (game.originalPrice) {
                     <span class="card-old-price">{{ game.originalPrice }}</span>
                   }
                   <span class="card-promo-price">{{ game.promoPrice }}</span>
                 </div>
+                <span class="platform-tag">STEAM</span>
               </div>
             </div>
+          </a>
+        }
+      </div>
+    </section>
+
+    <!-- =====================================================================
+5. RECOMENDADOS PARA VOCÊ (CARROSSEL SWIPER COVERFLOW 3D)
+         ===================================================================== -->
+    @if (recommendedGames.length > 0) {
+      <section class="carousel-section">
+        <div class="section-header">
+          <div class="section-title-group">
+            <h2>✨ Recomendados para Você</h2>
+            <span class="section-subtitle">
+              @if (generoRecomendado) {
+                Baseado no seu interesse em <strong>{{ generoRecomendado }}</strong>
+              } @else {
+                Seleção especial da Caribe's Gaming para sua biblioteca
+              }
+            </span>
+          </div>
+          <div class="section-actions">
+            @if (generoRecomendado) {
+              <a
+                class="ver-todos-btn"
+                routerLink="/jogos"
+                [queryParams]="{ busca: generoRecomendado }"
+              >
+                Mais de {{ generoRecomendado }}
+              </a>
+            }
+          </div>
+        </div>
+
+        <div #recommendedSwiper class="swiper recommended-swiper">
+          <div class="swiper-wrapper">
+            @for (game of recommendedGames; track game.id) {
+              <div class="swiper-slide recommended-slide">
+                <a
+                  class="game-card swiper-game-card"
+                  [routerLink]="['/produto', game.slug]"
+                  (click)="aoClicarNoJogo(game)"
+                >
+                  <div class="card-image-box">
+                    <img
+                      [src]="game.horizontal"
+                      [alt]="game.title"
+                      loading="lazy"
+                      decoding="async"
+                      (error)="imagemCardFalhou($event, game)"
+                    />
+                    @if (game.discount) {
+                      <span class="card-discount">{{ game.discount }}</span>
+                    }
+                    <span class="card-hover-pill">⚡ Entrega Imediata</span>
+                    <button
+                      type="button"
+                      class="quick-add-btn"
+                      [class.added]="adicionadoRecentemente.has(game.id)"
+                      [attr.aria-label]="'Adicionar ao carrinho: ' + game.title"
+                      (click)="adicionarRapido($event, game)"
+                    >
+                      {{ adicionadoRecentemente.has(game.id) ? '✓' : '+' }}
+                    </button>
+                  </div>
+                  <div class="card-info">
+                    <h3 class="card-title" [title]="game.title">{{ game.title }}</h3>
+                    <span class="card-publisher">{{ game.subtitle }}</span>
+                    <div class="card-footer">
+                      <div class="card-price-box">
+                        @if (game.originalPrice) {
+                          <span class="card-old-price">{{ game.originalPrice }}</span>
+                        }
+                        <span class="card-promo-price">{{ game.promoPrice }}</span>
+                      </div>
+                      <span class="platform-tag">STEAM</span>
+                    </div>
+                  </div>
+                </a>
+              </div>
+            }
+          </div>
+          <div class="swiper-pagination recommended-pagination"></div>
+        </div>
+      </section>
+    }
+
+    <!-- =====================================================================
+6. OFERTAS RELÂMPAGO (COM CONTADOR REGRESSIVO)
+         ===================================================================== -->
+    @if (flashDeals.length > 0) {
+      <section class="flash-section">
+        <div class="flash-box">
+          <div class="flash-header">
+            <div class="flash-title-area">
+              <span class="flash-pill">⚡ TEMPO LIMITADO</span>
+              <h2>Ofertas Relâmpago do Dia</h2>
+            </div>
+
+            <div class="countdown-box" aria-label="Tempo restante das ofertas">
+              <span class="countdown-label">Termina em:</span>
+              <div class="countdown-digits">
+                <span class="digit">{{ tempoRestante.horas }}</span>
+                <span class="sep">:</span>
+                <span class="digit">{{ tempoRestante.minutos }}</span>
+                <span class="sep">:</span>
+                <span class="digit">{{ tempoRestante.segundos }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flash-grid">
+            @for (game of flashDeals; track game.id) {
+              <a
+                class="flash-card"
+                [routerLink]="['/produto', game.slug]"
+                (click)="aoClicarNoJogo(game)"
+              >
+                <div class="flash-img">
+                  <img
+                    [src]="game.horizontal"
+                    [alt]="game.title"
+                    loading="lazy"
+                    (error)="imagemCardFalhou($event, game)"
+                  />
+                  @if (game.discount) {
+                    <span class="card-discount">{{ game.discount }}</span>
+                  }
+                </div>
+                <div class="flash-info">
+                  <h3 [title]="game.title">{{ game.title }}</h3>
+                  <span class="flash-genre">{{ game.subtitle }}</span>
+                  <div class="flash-bottom">
+                    <div class="card-price-box">
+                      @if (game.originalPrice) {
+                        <span class="card-old-price">{{ game.originalPrice }}</span>
+                      }
+                      <span class="card-promo-price">{{ game.promoPrice }}</span>
+                    </div>
+                    <button
+                      type="button"
+                      class="flash-cart-btn"
+                      [class.added]="adicionadoRecentemente.has(game.id)"
+                      (click)="adicionarRapido($event, game)"
+                    >
+                      {{ adicionadoRecentemente.has(game.id) ? 'Adicionado ✓' : '+ Carrinho' }}
+                    </button>
+                  </div>
+                </div>
+              </a>
+            }
+          </div>
+        </div>
+      </section>
+    }
+
+    <!-- =====================================================================
+7. EXPLORE POR GÊNERO (ROTA /jogos?busca=...)
+         ===================================================================== -->
+    <section class="categories-section">
+      <div class="section-header">
+        <div class="section-title-group">
+          <h2>🎮 Explore por Gênero</h2>
+          <span class="section-subtitle">Encontre sua próxima aventura pelo estilo de jogo</span>
+        </div>
+      </div>
+
+      <div class="categories-grid">
+        @for (cat of categorias; track cat.nome) {
+          <a
+            class="category-card"
+            [style.background]="cat.gradiente"
+            routerLink="/jogos"
+            [queryParams]="{ busca: cat.busca }"
+          >
+            <span class="category-icon">{{ cat.icone }}</span>
+            <div class="category-text">
+              <strong>{{ cat.nome }}</strong>
+              <span>{{ cat.descricao }}</span>
+            </div>
+            <span class="category-arrow">&#10095;</span>
+          </a>
+        }
+      </div>
+    </section>
+
+    <!-- =====================================================================
+8. SPOTLIGHT / ESCOLHA DA EQUIPE
+         ===================================================================== -->
+    @if (destaqueEspecial; as spot) {
+      <section class="spotlight-section">
+        <div class="spotlight-card">
+          <div class="spotlight-media" (click)="irParaPaginaDoJogo(spot)">
+            <img
+              [src]="spot.image || spot.horizontal"
+              [alt]="spot.title"
+              loading="lazy"
+              (error)="bannerFalhou(spot.id)"
+            />
+            <span class="spotlight-badge">{{ spot.badge }}</span>
+          </div>
+
+          <div class="spotlight-body">
+            <span class="spotlight-kicker">RECOMENDAÇÃO CARIBE'S GAMING</span>
+            <h2 (click)="irParaPaginaDoJogo(spot)">{{ spot.title }}</h2>
+            <p class="spotlight-desc">
+              {{ spot.subtitle }} — Ativação oficial garantida na Steam com entrega digital imediata
+              direto na sua conta.
+            </p>
+
+            <div class="spotlight-footer">
+              <div class="spotlight-prices">
+                @if (spot.discount) {
+                  <span class="discount-tag">{{ spot.discount }}</span>
+                }
+                <div class="prices">
+                  @if (spot.originalPrice) {
+                    <span class="old-price">{{ spot.originalPrice }}</span>
+                  }
+                  <span class="promo-price">{{ spot.promoPrice }}</span>
+                </div>
+              </div>
+
+              <div class="spotlight-actions">
+                <button type="button" class="buy-btn" (click)="comprarAgora(spot)">
+                  COMPRAR AGORA
+                </button>
+                <a
+                  class="ver-todos-btn"
+                  [routerLink]="['/produto', spot.slug]"
+                  (click)="aoClicarNoJogo(spot)"
+                >
+                  Ver detalhes
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    }
+
+    <!-- =====================================================================
+9. TOP 5 MAIS POPULARES (RANKING NUMERADO)
+         ===================================================================== -->
+    @if (topRankingGames.length > 0) {
+      <section class="ranking-section">
+        <div class="section-header">
+          <div class="section-title-group">
+            <h2>🏆 Top 5 da Semana</h2>
+            <span class="section-subtitle">Os títulos mais procurados pelos jogadores</span>
+          </div>
+          <a class="ver-todos-btn" routerLink="/jogos">Ver ranking completo</a>
+        </div>
+
+        <div class="ranking-list">
+          @for (game of topRankingGames; track game.id; let i = $index) {
+            <a
+              class="ranking-item"
+              [routerLink]="['/produto', game.slug]"
+              (click)="aoClicarNoJogo(game)"
+            >
+              <span class="ranking-number" [class.top-three]="i < 3">0{{ i + 1 }}</span>
+
+              <div class="ranking-thumb">
+                <img
+                  [src]="game.horizontal"
+                  [alt]="game.title"
+                  loading="lazy"
+                  (error)="imagemCardFalhou($event, game)"
+                />
+              </div>
+
+              <div class="ranking-info">
+                <h3 [title]="game.title">{{ game.title }}</h3>
+                <span>{{ game.subtitle }}</span>
+              </div>
+
+              <div class="ranking-price-col">
+                @if (game.discount) {
+                  <span class="card-discount-inline">{{ game.discount }}</span>
+                }
+                <div class="ranking-prices">
+                  @if (game.originalPrice) {
+                    <span class="card-old-price">{{ game.originalPrice }}</span>
+                  }
+                  <span class="card-promo-price">{{ game.promoPrice }}</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                class="ranking-add-btn"
+                [class.added]="adicionadoRecentemente.has(game.id)"
+                (click)="adicionarRapido($event, game)"
+              >
+                {{ adicionadoRecentemente.has(game.id) ? '✓' : '+ Carrinho' }}
+              </button>
+            </a>
           }
         </div>
       </section>
     }
+
+    <!-- =====================================================================
+10. VISTOS RECENTEMENTE (SWIPER EFFECT CARDS)
+         ===================================================================== -->
+    @if (recentlyViewedGames.length > 0) {
+      <section class="recent-section">
+        <div class="section-header">
+          <div class="section-title-group">
+            <h2>🕒 Vistos Recentemente</h2>
+            <span class="section-subtitle">Arraste os cards para rever seus últimos jogos</span>
+          </div>
+        </div>
+
+        <div class="recent-cards-wrapper">
+          <div #recentSwiper class="swiper recent-cards-swiper">
+            <div class="swiper-wrapper">
+              @for (game of recentlyViewedGames; track game.id) {
+                <div class="swiper-slide recent-deck-slide">
+                  <a class="recent-deck-card" [routerLink]="['/produto', game.slug]">
+                    <img
+                      [src]="game.capa || game.horizontal"
+                      [alt]="game.title"
+                      loading="lazy"
+                      (error)="imagemCardFalhou($event, game)"
+                    />
+                    <div class="recent-deck-overlay">
+                      @if (game.discount) {
+                        <span class="card-discount">{{ game.discount }}</span>
+                      }
+                      <button
+                        type="button"
+                        class="quick-add-btn visible-btn"
+                        [class.added]="adicionadoRecentemente.has(game.id)"
+                        [attr.aria-label]="'Adicionar ao carrinho: ' + game.title"
+                        (click)="adicionarRapido($event, game)"
+                      >
+                        {{ adicionadoRecentemente.has(game.id) ? '✓' : '+' }}
+                      </button>
+                      <div class="recent-deck-info">
+                        <span class="recent-deck-genre">{{ game.subtitle }}</span>
+                        <strong [title]="game.title">{{ game.title }}</strong>
+                        <span class="recent-deck-price">{{ game.promoPrice }}</span>
+                      </div>
+                    </div>
+                  </a>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      </section>
+    }
+
+    <!-- =====================================================================
+11. BANNER DE CHAMADA FINAL (CTA CATÁLOGO COMPLETO)
+         ===================================================================== -->
+    <section class="cta-banner">
+      <div class="cta-content">
+        <span class="cta-tag">CATÁLOGO COMPLETO</span>
+        <h2>Procurando um título específico?</h2>
+        <p>
+          Explore dezenas de jogos para PC com ativação imediata, filtros por gênero e os melhores
+          preços da Caribe's Gaming.
+        </p>
+      </div>
+      <a class="cta-btn" routerLink="/jogos">VER TODOS OS JOGOS</a>
+    </section>
+  }
+
+  <!-- =====================================================================
+       TOAST FLUTUANTE DE FEEDBACK DO CARRINHO
+       ===================================================================== -->
+  @if (toastJogo; as item) {
+    <div class="cart-toast" role="status" aria-live="polite">
+      <img [src]="item.horizontal" [alt]="item.title" />
+      <div class="toast-body">
+        <span class="toast-kicker">✓ Adicionado ao carrinho</span>
+        <strong>{{ item.title }}</strong>
+      </div>
+      <a class="toast-link" routerLink="/carrinho">Ver carrinho</a>
+      <button type="button" class="toast-close" aria-label="Fechar aviso" (click)="fecharToast()">
+        ×
+      </button>
+    </div>
   }
 </main>
