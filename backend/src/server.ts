@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { connectDatabase } from './database';
+import { connectDatabase } from './config/database';
 import pedidosRoutes from './routes/pedidos';
 import produtosRoutes from './routes/produto';
 
