@@ -4,20 +4,22 @@ import cors from 'cors';
 import { connectDatabase } from './config/database';
 import pedidosRoutes from './routes/pedidos';
 import produtosRoutes from './routes/produto';
+import mercadoPagoRoutes from './routes/mercadopago';
 
 const app = express();
 
 app.use(
   cors({
-    origin: 'http://localhost:4200',
+    origin: ['http://localhost:4200', 'https://caribesgaming.vercel.app'],
   }),
 );
 
 app.use(express.json());
+
 app.use('/api/pedidos', pedidosRoutes);
 app.use('/api/produtos', produtosRoutes);
+app.use('/api/mercado-pago', mercadoPagoRoutes);
 
-// Rota para testar a API
 app.get('/api/status', (_req, res) => {
   res.json({
     message: 'Backend do Caribe Gaming funcionando!',
@@ -25,20 +27,20 @@ app.get('/api/status', (_req, res) => {
   });
 });
 
-// Iniciar o backend
 async function startServer() {
+  const PORT = Number(process.env['PORT']) || 4000;
+
   try {
     await connectDatabase();
-
-    const PORT = Number(process.env['PORT']) || 4000;
-
-    app.listen(PORT, () => {
-      console.log(`Backend rodando em http://localhost:${PORT}`);
-    });
+    console.log('MongoDB conectado com sucesso!');
   } catch (error) {
-    console.error('Erro ao iniciar o backend:', error);
-    process.exit(1);
+    console.warn('MongoDB indisponível. O backend iniciará sem acesso ao banco.');
+    console.warn(error);
   }
+
+  app.listen(PORT, () => {
+    console.log(`Backend rodando em http://localhost:${PORT}`);
+  });
 }
 
 startServer();

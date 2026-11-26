@@ -3,10 +3,26 @@
 
   @if (compraFinalizada()) {
     <div class="checkout-sucesso">
-      <div class="sucesso-icon">⚓ </div>
+      <div class="sucesso-icon">⚓</div>
       <h3>Tesouros adquiridos com sucesso!</h3>
-      <p>Seu pedido foi processado com sucesso e os jogos foram liberados para sua tripulação.</p>
-      <p>Sua chave foi encaminhada diretamente para seu email cadastrado, não esqueça de conferir a caixa de span.</p>
+
+      <p>Seu pedido foi processado com sucesso.</p>
+
+      @if (enviandoEmail()) {
+        <p>Preparando o envio das suas chaves por e-mail...</p>
+      } @else if (emailEnviado()) {
+        <p>
+          Suas chaves foram encaminhadas para o e-mail cadastrado. Não esqueça de conferir a caixa
+          de spam.
+        </p>
+      } @else if (erroEmail()) {
+        <p class="erro-pagamento" role="alert">
+          {{ erroEmail() }}
+        </p>
+      } @else {
+        <p>Seu pedido foi finalizado. O envio do e-mail ainda não foi confirmado.</p>
+      }
+
       <button class="btn-acao btn-primary btn-voltar-jogos" routerLink="/jogos">
         Continuar Navegando
       </button>
@@ -16,22 +32,24 @@
   @if (carrinhoFacade.carrinhoVazio() && !compraFinalizada()) {
     <div class="checkout-vazio">
       <p>Seu porão de tesouros está vazio. Adicione jogos antes de finalizar a compra.</p>
+
       <button class="btn-acao btn-primary" routerLink="/jogos">Explorar Catálogo</button>
     </div>
   } @else if (!compraFinalizada()) {
     <div class="checkout-grid">
-      <!-- FORMULÁRIO DE DADOS E PAGAMENTO -->
-      <form class="checkout-form" [formGroup]="formulario">
+      <form class="checkout-form" [formGroup]="formulario" (ngSubmit)="finalizar()">
         <h3>1. Dados do Aventureiro</h3>
 
         <div class="field-group">
           <label class="field-label">Nome Completo</label>
+
           <input
             type="text"
             formControlName="nome"
             placeholder="Ex: Edward Kenway"
             [class.input-erro]="campoInvalido('nome')"
           />
+
           @if (campoInvalido('nome')) {
             <small>Por favor, informe seu nome completo (mínimo 3 caracteres).</small>
           }
@@ -39,12 +57,14 @@
 
         <div class="field-group">
           <label class="field-label">E-mail para Envio das Chaves</label>
+
           <input
             type="email"
             formControlName="email"
             placeholder="Ex: capitao@caribe.com"
             [class.input-erro]="campoInvalido('email')"
           />
+
           @if (campoInvalido('email')) {
             <small>Informe um e-mail válido para receber as chaves de ativação.</small>
           }
@@ -52,74 +72,95 @@
 
         <div class="field-group">
           <label class="field-label">Endereço de Cobrança</label>
+
           <input
             type="text"
             formControlName="endereco"
             placeholder="Rua, Número, Bairro, Cidade - UF"
             [class.input-erro]="campoInvalido('endereco')"
           />
+
           @if (campoInvalido('endereco')) {
             <small>Por favor, informe seu endereço para emissão do recibo.</small>
           }
         </div>
 
-        <h3>2. Forma de Pagamento</h3>
+        <h3>2. Escolha como deseja concluir sua compra</h3>
+
         <div class="metodos-pagamento">
           <button
             type="button"
             class="metodo-card"
-            [class.selecionado]="metodoPagamento() === 'pix'"
-            (click)="selecionarPagamento('pix')"
-          >
-            <span class="metodo-icon">⚡</span>
-            <div class="metodo-info">
-              <strong>PIX</strong>
-              <span>Aprovação instantânea</span>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            class="metodo-card"
-            [class.selecionado]="metodoPagamento() === 'cartao'"
-            (click)="selecionarPagamento('cartao')"
+            [class.selecionado]="formaFinalizacao() === 'mercado-pago'"
+            [attr.aria-pressed]="formaFinalizacao() === 'mercado-pago'"
+            (click)="selecionarFinalizacao('mercado-pago')"
           >
             <span class="metodo-icon">💳</span>
+
             <div class="metodo-info">
-              <strong>Cartão de Crédito</strong>
-              <span>Até 12x sem juros</span>
+              <strong>Mercado Pago</strong>
+              <span>Pix, cartão de crédito ou boleto</span>
             </div>
           </button>
 
           <button
             type="button"
             class="metodo-card"
-            [class.selecionado]="metodoPagamento() === 'boleto'"
-            (click)="selecionarPagamento('boleto')"
+            [class.selecionado]="formaFinalizacao() === 'bau'"
+            [attr.aria-pressed]="formaFinalizacao() === 'bau'"
+            (click)="selecionarFinalizacao('bau')"
           >
-            <span class="metodo-icon">📄</span>
+            <span class="metodo-icon">🏴‍☠️</span>
+
             <div class="metodo-info">
-              <strong>Boleto Bancário</strong>
-              <span>Compensação em até 2 dias</span>
+              <strong>Baú de Tesouros</strong>
+              <span>Conclua seu pedido dentro do Caribe Gaming</span>
             </div>
           </button>
         </div>
 
+        @if (formaFinalizacao() === 'mercado-pago') {
+          <div class="aviso-demonstracao">
+            <strong>Pagamento pelo Mercado Pago</strong>
+            <p>
+              Você será direcionado ao ambiente do Mercado Pago para escolher entre Pix, cartão de
+              crédito ou boleto e concluir o pagamento.
+            </p>
+          </div>
+        } @else {
+          <div class="aviso-demonstracao">
+            <strong>Abra seu Baú de Tesouros!</strong>
+            <p>
+              Esta é uma opção demonstrativa do projeto. Seu pedido será concluído dentro do Caribe
+              Gaming, suas chaves serão geradas e enviadas para o e-mail cadastrado. Não haverá
+              cobrança real.
+            </p>
+          </div>
+        }
+
         <button
-          type="button"
+          type="submit"
           class="btn-acao btn-primary btn-finalizar"
-          (click)="finalizar()"
           [disabled]="formulario.invalid || processandoPagamento()"
         >
           <i class="fa-solid fa-lock"></i>
-          {{ processandoPagamento() ? 'Abrindo pagamento...' : 'Pagar com Mercado Pago' }}
+
+          @if (processandoPagamento()) {
+            Preparando seus tesouros...
+          } @else if (formaFinalizacao() === 'mercado-pago') {
+            Continuar para o Mercado Pago
+          } @else {
+            Abrir meu Baú de Tesouros
+          }
         </button>
+
         @if (erroPagamento()) {
-          <p class="erro-pagamento" role="alert">{{ erroPagamento() }}</p>
+          <p class="erro-pagamento" role="alert">
+            {{ erroPagamento() }}
+          </p>
         }
       </form>
 
-      <!-- RESUMO DETALHADO DO PEDIDO -->
       <div class="checkout-lateral">
         <section class="checkout-resumo">
           <h3>🏴‍☠️ Resumo do Pedido</h3>
@@ -130,12 +171,16 @@
                 @if (item.imagemUrl) {
                   <img [src]="item.imagemUrl" [alt]="item.nome" class="item-thumb" />
                 }
+
                 <div class="item-detalhes">
                   <span class="item-nome">{{ item.nome }}</span>
-                  <span class="item-meta"
-                    >{{ item.plataforma || 'PC' }} · Qtd: {{ item.quantidade || 1 }}</span
-                  >
+
+                  <span class="item-meta">
+                    {{ item.plataforma || 'PC' }}
+                    · Qtd: {{ item.quantidade || 1 }}
+                  </span>
                 </div>
+
                 <strong class="item-preco">
                   R$ {{ (item.preco * (item.quantidade || 1)).toFixed(2) }}
                 </strong>
@@ -143,43 +188,46 @@
             }
           </div>
 
-          <!-- DISCRIMINAÇÃO DE TOTAIS -->
           <div class="checkout-calculo">
             <div class="linha-calculo">
               <span>Subtotal ({{ carrinhoFacade.quantidade() }} itens)</span>
               <span>R$ {{ carrinhoFacade.total().toFixed(2) }}</span>
             </div>
+
             <div class="linha-calculo">
               <span>Entrega Digital</span>
               <span class="badge-gratis">GRÁTIS (Instantânea)</span>
             </div>
+
             <div class="checkout-total-box">
               <span class="total-label">Total a pagar:</span>
-              <strong class="checkout-total">R$ {{ carrinhoFacade.total().toFixed(2) }}</strong>
+              <strong class="checkout-total"> R$ {{ carrinhoFacade.total().toFixed(2) }} </strong>
             </div>
           </div>
         </section>
 
-        <!-- BLOCO DE SEGURANÇA E PRIVACIDADE PIRATA -->
         <section class="pirate-security" [class.aberto]="segurancaAberta()">
           <div class="security-header" (click)="toggleSeguranca()">
             <div class="security-title">
               <span class="pirate-icon">⚓</span>
+
               <div>
                 <h4>Segurança e Privacidade</h4>
-                <p>🏴‍☠️ Pagamentos seguros · Chaves 100% originais</p>
+                <p>🏴‍☠️ Ambiente de demonstração do projeto</p>
               </div>
             </div>
+
             <span class="arrow" [class.rotacionada]="segurancaAberta()">›</span>
           </div>
 
           @if (segurancaAberta()) {
             <div class="payment-security">
               <p>
-                ⚓ Navegue com tranquilidade! Seus dados pessoais e transações são protegidos com
-                criptografia de ponta a ponta.
+                ⚓ Este checkout faz parte de um projeto demonstrativo. A integração com o Mercado
+                Pago utiliza o ambiente de testes. A opção Baú de Tesouros não realiza cobrança.
               </p>
-              <div class="security-badge">🛡️ Sua tripulação está protegida</div>
+
+              <div class="security-badge">🛡️ Ambiente de demonstração</div>
             </div>
           }
         </section>
