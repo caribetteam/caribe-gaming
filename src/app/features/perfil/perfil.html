@@ -1,18 +1,34 @@
 <div class="tela-perfil">
   <div class="card-perfil">
-
     <div class="avatar-grande-container">
-      <i class="fa-solid fa-circle-user avatar-grande"></i>
+      <i class="fa-solid fa-circle-user avatar-grande" aria-hidden="true"></i>
     </div>
 
     <h1>Meu Perfil</h1>
 
     <div class="info-fixa">
-      <label>Email</label>
-      <p>{{ authFacade.usuarioAtual()?.email }}</p>
+      <div class="info-item">
+        <label>Email</label>
+        <p>{{ authFacade.usuarioAtual()?.email || 'Não disponível' }}</p>
+      </div>
+      <div class="info-item">
+        <label>Perfil</label>
+        <span class="badge-perfil">
+          {{ authFacade.ehAdmin() ? 'Administrador' : 'Usuário' }}
+        </span>
+      </div>
     </div>
 
-    <form [formGroup]="perfilForm" (ngSubmit)="salvar()">
+    @if (mensagemSucesso()) {
+      <p class="mensagem-sucesso" role="status">{{ mensagemSucesso() }}</p>
+    }
+    @if (mensagemErro()) {
+      <p class="erro-geral" role="alert">{{ mensagemErro() }}</p>
+    }
+
+    <form class="secao-form" [formGroup]="perfilForm" (ngSubmit)="salvar()" novalidate>
+      <h2 class="subtitulo-secao">Dados pessoais</h2>
+
       <div class="campo">
         <label for="nomeUsuario">Nome de usuário</label>
         <input
@@ -22,21 +38,89 @@
           placeholder="Como você quer ser chamado?"
         />
 
-        <span
-          class="erro"
-          *ngIf="perfilForm.get('nomeUsuario')?.touched && perfilForm.get('nomeUsuario')?.invalid"
-        >
-          O nome de usuário precisa ter no mínimo 3 caracteres
-        </span>
+        @if (perfilForm.get('nomeUsuario')?.touched && perfilForm.get('nomeUsuario')?.invalid) {
+          <span class="erro">O nome de usuário precisa ter no mínimo 3 caracteres</span>
+        }
       </div>
 
-      <p class="mensagem-sucesso" *ngIf="mensagemSucesso()">{{ mensagemSucesso() }}</p>
-      <p class="erro-geral" *ngIf="mensagemErro()">{{ mensagemErro() }}</p>
-
-      <button type="submit" [disabled]="salvando()">
-        {{ salvando() ? 'Salvando...' : 'Salvar alterações' }}
+      <button type="submit" [disabled]="salvandoNome() || perfilForm.invalid">
+        {{ salvandoNome() ? 'Salvando...' : 'Salvar alterações' }}
       </button>
     </form>
+
+    <form class="secao-form divisor" [formGroup]="senhaForm" (ngSubmit)="alterarSenha()" novalidate>
+      <h2 class="subtitulo-secao">Segurança</h2>
+
+      <div class="campo">
+        <label for="novaSenha">Nova senha</label>
+        <input
+          id="novaSenha"
+          type="password"
+          formControlName="novaSenha"
+          placeholder="Mínimo de 6 caracteres"
+        />
+        @if (senhaForm.get('novaSenha')?.touched && senhaForm.get('novaSenha')?.invalid) {
+          <span class="erro">A senha deve ter no mínimo 6 caracteres</span>
+        }
+      </div>
+
+      <div class="campo">
+        <label for="confirmarSenha">Confirmar nova senha</label>
+        <input
+          id="confirmarSenha"
+          type="password"
+          formControlName="confirmarSenha"
+          placeholder="Repita a nova senha"
+        />
+        @if (senhaForm.get('confirmarSenha')?.touched && senhaForm.hasError('senhasDiferentes')) {
+          <span class="erro">As senhas não coincidem</span>
+        }
+      </div>
+
+      <button type="submit" [disabled]="salvandoSenha() || senhaForm.invalid">
+        {{ salvandoSenha() ? 'Alterando senha...' : 'Alterar senha' }}
+      </button>
+    </form>
+
+    <div class="zona-perigo divisor">
+      <h2 class="subtitulo-perigo">Zona de perigo</h2>
+      <p class="texto-perigo">
+        Apagar a conta remove permanentemente o seu acesso e os dados associados.
+      </p>
+
+      @if (!confirmandoExclusao()) {
+        <button
+          type="button"
+          class="btn-perigo"
+          [disabled]="excluindoConta()"
+          (click)="solicitarConfirmacaoExclusao()"
+        >
+          Apagar conta
+        </button>
+      } @else {
+        <div class="confirmacao-box">
+          <p class="texto-confirmacao">Tem certeza que deseja apagar sua conta?</p>
+          <div class="confirmacao-acoes">
+            <button
+              type="button"
+              class="btn-perigo"
+              [disabled]="excluindoConta()"
+              (click)="apagarConta()"
+            >
+              {{ excluindoConta() ? 'Apagando...' : 'Sim, apagar' }}
+            </button>
+            <button
+              type="button"
+              class="btn-secundario"
+              [disabled]="excluindoConta()"
+              (click)="cancelarExclusao()"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      }
+    </div>
 
     <a routerLink="/" class="link-voltar">← Voltar para a Home</a>
   </div>

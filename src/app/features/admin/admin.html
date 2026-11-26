@@ -3,14 +3,15 @@
     <span class="badge">ÁREA RESTRITA</span>
     <h1 class="admin-title">Painel Administrativo</h1>
     <p class="admin-subtitle">
-      Bem-vindo ao painel administrativo! Aqui você pode gerenciar produtos, pedidos e usuários de forma eficiente.
+      Bem-vindo ao painel administrativo! Aqui você pode gerenciar produtos, pedidos e usuários de
+      forma eficiente.
     </p>
   </section>
 
   <section class="admin-user-section">
     <h2>Usuário autenticado</h2>
     <div class="user-info-box">
-      <p><strong>E-mail:</strong> {{ authFacade.usuarioAtual()?.email }}</p>
+      <p><strong>E-mail:</strong> {{ authFacade.usuarioAtual()?.email ?? 'Não informado' }}</p>
       <p><strong>Perfil:</strong> {{ authFacade.ehAdmin() ? 'Administrador' : 'Usuário' }}</p>
       <p class="status-line">
         Usuário autenticado como {{ authFacade.ehAdmin() ? 'Administrador' : 'Usuário' }}.
@@ -39,16 +40,233 @@
   <section class="admin-actions-section">
     <h2>Ações administrativas</h2>
     <p class="actions-note">
-      Aqui você pode realizar diversas ações administrativas, como cadastrar novos produtos, gerenciar pedidos e manipular informações dos usuários.
+      Aqui você pode realizar diversas ações administrativas, como cadastrar novos produtos,
+      gerenciar pedidos e manipular informações dos usuários.
     </p>
+
     <div class="actions-row">
-      <button pButton class="action-btn">Cadastrar produto</button>
-      <button pButton class="action-btn">Gerenciar pedidos</button>
-      <button pButton class="action-btn">Gerenciar usuários</button>
+      <button
+        pButton
+        type="button"
+        class="action-btn"
+        [class.active-btn]="secaoAtiva() === 'produtos'"
+        (click)="alternarSecao('produtos')"
+      >
+        Cadastrar produto
+      </button>
+      <button
+        pButton
+        type="button"
+        class="action-btn"
+        [class.active-btn]="secaoAtiva() === 'pedidos'"
+        (click)="alternarSecao('pedidos')"
+      >
+        Gerenciar pedidos
+      </button>
+      <button
+        pButton
+        type="button"
+        class="action-btn"
+        [class.active-btn]="secaoAtiva() === 'usuarios'"
+        (click)="alternarSecao('usuarios')"
+      >
+        Gerenciar usuários
+      </button>
     </div>
+
+    @if (feedbackMsg()) {
+      <div class="feedback-banner" role="status">
+        {{ feedbackMsg() }}
+      </div>
+    }
+
+    @if (secaoAtiva() === 'produtos') {
+      <div class="panel-box">
+        <div class="panel-header">
+          <h3>Novo produto</h3>
+          <button type="button" class="close-panel-btn" (click)="secaoAtiva.set(null)">
+            Fechar
+          </button>
+        </div>
+
+        <form class="admin-form" [formGroup]="produtoForm" (ngSubmit)="cadastrarProduto()">
+          <div class="form-row">
+            <label class="field">
+              <span>Nome do produto</span>
+              <input type="text" formControlName="nome" placeholder="Ex.: Teclado Mecânico" />
+            </label>
+
+            <label class="field">
+              <span>Preço (R$)</span>
+              <input type="number" step="0.01" formControlName="preco" />
+            </label>
+
+            <label class="field">
+              <span>Estoque</span>
+              <input type="number" formControlName="estoque" />
+            </label>
+          </div>
+
+          <label class="field">
+            <span>Descrição</span>
+            <input
+              type="text"
+              formControlName="descricao"
+              placeholder="Detalhes opcionais do produto"
+            />
+          </label>
+
+          <button type="submit" class="submit-btn" [disabled]="produtoForm.invalid">
+            Salvar produto
+          </button>
+        </form>
+      </div>
+    }
+
+    @if (secaoAtiva() === 'pedidos') {
+      <div class="panel-box">
+        <div class="panel-header">
+          <h3>Pedidos</h3>
+          <button type="button" class="close-panel-btn" (click)="secaoAtiva.set(null)">
+            Fechar
+          </button>
+        </div>
+
+        @if (pedidos().length === 0) {
+          <p class="empty-msg">Nenhum pedido encontrado.</p>
+        } @else {
+          <div class="table-wrapper">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Cliente</th>
+                  <th>Total</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (pedido of pedidos(); track pedido.id) {
+                  <tr>
+                    <td>{{ pedido.id }}</td>
+                    <td>{{ pedido.cliente }}</td>
+                    <td>{{ pedido.total | currency: 'BRL' }}</td>
+                    <td>
+                      <span class="status-pill" [attr.data-status]="pedido.status">
+                        {{ pedido.status }}
+                      </span>
+                    </td>
+                    <td class="row-actions">
+                      <button
+                        type="button"
+                        class="mini-btn"
+                        (click)="atualizarStatusPedido(pedido.id, 'Aprovado')"
+                      >
+                        Aprovar
+                      </button>
+                      <button
+                        type="button"
+                        class="mini-btn"
+                        (click)="atualizarStatusPedido(pedido.id, 'Enviado')"
+                      >
+                        Marcar enviado
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    }
+
+    @if (secaoAtiva() === 'usuarios') {
+      <div class="panel-box">
+        <div class="panel-header">
+          <h3>Usuários cadastrados</h3>
+          <button type="button" class="close-panel-btn" (click)="secaoAtiva.set(null)">
+            Fechar
+          </button>
+        </div>
+
+        <form class="admin-form" [formGroup]="usuarioForm" (ngSubmit)="adicionarUsuario()">
+          <div class="form-row">
+            <label class="field">
+              <span>Nome</span>
+              <input type="text" formControlName="nome" placeholder="Nome do usuário" />
+            </label>
+
+            <label class="field">
+              <span>E-mail</span>
+              <input type="email" formControlName="email" placeholder="usuario@exemplo.com" />
+            </label>
+
+            <label class="field">
+              <span>Perfil</span>
+              <select formControlName="perfil">
+                <option value="Usuário">Usuário</option>
+                <option value="Administrador">Administrador</option>
+              </select>
+            </label>
+          </div>
+
+          <button type="submit" class="submit-btn" [disabled]="usuarioForm.invalid">
+            Adicionar usuário
+          </button>
+        </form>
+
+        @if (usuarios().length === 0) {
+          <p class="empty-msg">Nenhum usuário encontrado.</p>
+        } @else {
+          <div class="table-wrapper">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>E-mail</th>
+                  <th>Perfil</th>
+                  <th>Situação</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (usuario of usuarios(); track usuario.id) {
+                  <tr>
+                    <td>{{ usuario.nome }}</td>
+                    <td>{{ usuario.email }}</td>
+                    <td>{{ usuario.perfil }}</td>
+                    <td>{{ usuario.ativo ? 'Ativo' : 'Inativo' }}</td>
+                    <td class="row-actions">
+                      <button
+                        type="button"
+                        class="mini-btn"
+                        (click)="alternarPerfilUsuario(usuario.id)"
+                      >
+                        Alternar perfil
+                      </button>
+                      <button
+                        type="button"
+                        class="mini-btn"
+                        (click)="alternarStatusUsuario(usuario.id)"
+                      >
+                        {{ usuario.ativo ? 'Desativar' : 'Ativar' }}
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    }
   </section>
 
   <section class="admin-logout-section">
-    <button pButton class="logout-btn" (click)="sair()">Sair da conta administrativa</button>
+    <button pButton type="button" class="logout-btn" (click)="sair()">
+      Sair da conta administrativa
+    </button>
   </section>
 </main>
